@@ -1,0 +1,14 @@
+[package]
+name = "renet-adapter"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+renet = { workspace = true }
+trueworld-core = { path = "../../core" }
+trueworld-protocol = { path = "../../protocol" }
+
+tokio = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

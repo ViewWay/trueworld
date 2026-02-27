@@ -1,0 +1,12 @@
+[package]
+name = "bevy-combat"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+trueworld-core = { path = "../../core" }
+trueworld-protocol = { path = "../../protocol" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

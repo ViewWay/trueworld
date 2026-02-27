@@ -1,0 +1,11 @@
+[package]
+name = "trueworld-action"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+trueworld-core = { path = "../../core" }
+trueworld-perception = { path = "../perception" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

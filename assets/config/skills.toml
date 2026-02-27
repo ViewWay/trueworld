@@ -1,0 +1,306 @@
+# TrueWorld - Skills Configuration
+# 技能定义文件
+
+# ============================================
+# 基础攻击技能
+# ============================================
+
+[skills.normal_attack]
+name = "普通攻击"
+name_en = "Normal Attack"
+description = "基础的武器攻击"
+damage_type = "Physical"
+element = "None"
+
+[skills.normal_attack.damage]
+base = 50
+scaling = "strength"
+multiplier = 1.0
+
+[skills.normal_attack.cost]
+stamina = 10
+
+[skills.normal_attack.cooldown]
+base = 0.5
+
+[skills.normal_attack.animation]
+name = "attack_01"
+duration = 0.5
+hitbox_start = 0.2
+hitbox_end = 0.3
+hitbox_range = 2.0
+hitbox_arc = 60
+
+[skills.normal_attack.triggers]
+voice_keywords = []
+gesture_required = false
+keybind = "MouseLeft"
+
+# ============================================
+# 剑技系列
+# ============================================
+
+[skills.horizontal_slash]
+name = "水平斩"
+name_en = "Horizontal Slash"
+description = "从左向右的水平斩击，对前方扇形区域造成伤害"
+damage_type = "Physical"
+element = "None"
+
+[skills.horizontal_slash.damage]
+base = 120
+scaling = "strength"
+multiplier = 1.5
+
+[skills.horizontal_slash.cost]
+mp = 15
+stamina = 25
+
+[skills.horizontal_slash.cooldown]
+base = 1.0
+
+[skills.horizontal_slash.animation]
+name = "skill_horizontal_slash"
+duration = 0.8
+hitbox_start = 0.3
+hitbox_end = 0.5
+hitbox_arc = 90
+hitbox_range = 3.0
+knockback = 1.0
+
+[skills.horizontal_slash.combo]
+chain_into = ["vertical_slash", "sonic_impact"]
+combo_multiplier = 1.2
+
+[skills.horizontal_slash.triggers]
+voice_keywords = ["水平斩", "横扫", "横斩", "horizontal"]
+gesture_required = true
+keybind = "Digit1"
+
+[skills.horizontal_slash.unlock]
+level = 1
+skill_points = 0
+
+# ============================================
+
+[skills.vertical_slash]
+name = "垂直斩"
+name_en = "Vertical Slash"
+description = "从上而下的垂直斩击"
+damage_type = "Physical"
+element = "None"
+
+[skills.vertical_slash.damage]
+base = 150
+scaling = "strength"
+multiplier = 1.8
+
+[skills.vertical_slash.cost]
+mp = 20
+stamina = 30
+
+[skills.vertical_slash.cooldown]
+base = 1.2
+
+[skills.vertical_slash.animation]
+name = "skill_vertical_slash"
+duration = 0.9
+hitbox_start = 0.3
+hitbox_end = 0.5
+hitbox_arc = 45
+hitbox_range = 2.5
+knockback = 2.0
+
+[skills.vertical_slash.combo]
+chain_into = ["horizontal_slash", "sonic_impact"]
+combo_multiplier = 1.3
+
+[skills.vertical_slash.triggers]
+voice_keywords = ["垂直斩", "竖斩", "劈砍", "vertical"]
+gesture_required = true
+keybind = "Digit2"
+
+[skills.vertical_slash.unlock]
+level = 3
+skill_points = 1
+
+# ============================================
+
+[skills.sonic_impact]
+name = "音速冲击"
+name_en = "Sonic Impact"
+description = "高速突刺技，穿透路径上的所有敌人"
+damage_type = "Physical"
+element = "Wind"
+
+[skills.sonic_impact.damage]
+base = 80
+scaling = "dexterity"
+multiplier = 2.0
+
+[skills.sonic_impact.cost]
+mp = 25
+stamina = 35
+
+[skills.sonic_impact.cooldown]
+base = 2.0
+
+[skills.sonic_impact.animation]
+name = "skill_sonic_impact"
+duration = 0.6
+hitbox_start = 0.1
+hitbox_end = 0.4
+hitbox_range = 5.0
+penetration = 3
+
+[skills.sonic_impact.combo]
+chain_into = ["horizontal_slash", "vertical_slash"]
+combo_multiplier = 1.5
+
+[skills.sonic_impact.triggers]
+voice_keywords = ["音速冲击", "突刺", "sonic"]
+gesture_required = true
+keybind = "Digit3"
+
+[skills.sonic_impact.unlock]
+level = 5
+skill_points = 2
+
+# ============================================
+# 防御技能
+# ============================================
+
+[skills.parry]
+name = "格挡"
+name_en = "Parry"
+description = "完美格挡敌人的攻击并反击"
+damage_type = "None"
+element = "None"
+
+[skills.parry.damage]
+reflection = 0.5  # 反弹 50% 伤害
+
+[skills.parry.cost]
+stamina = 20
+
+[skills.parry.cooldown]
+base = 0.8
+
+[skills.parry.animation]
+name = "parry"
+duration = 0.4
+parry_window = { start = 0.1, end = 0.25 }
+
+[skills.parry.effects]
+invincible_during_parry = true
+counter_attack_on_success = true
+
+[skills.parry.triggers]
+voice_keywords = ["格挡", "parry"]
+gesture_required = true
+keybind = "MouseRight"
+
+# ============================================
+# 移动技能
+# ============================================
+
+[skills.dodge]
+name = "闪避"
+name_en = "Dodge"
+description = "快速向指定方向闪避，避开攻击"
+damage_type = "None"
+element = "None"
+
+[skills.dodge.cost]
+stamina = 15
+
+[skills.dodge.cooldown]
+base = 0.5
+
+[skills.dodge.animation]
+name = "dodge"
+duration = 0.3
+dodge_distance = 3.0
+invincible_frames = 10
+
+[skills.dodge.triggers]
+voice_keywords = ["闪避", "dodge", "往左", "往右", "后退"]
+gesture_required = true
+keybind = "AltLeft"
+
+# ============================================
+# 魔法技能
+# ============================================
+
+[skills.fireball]
+name = "火球术"
+name_en = "Fireball"
+description = "发射火球攻击敌人"
+damage_type = "Magical"
+element = "Fire"
+
+[skills.fireball.damage]
+base = 200
+scaling = "intelligence"
+multiplier = 2.5
+
+[skills.fireball.cost]
+mp = 50
+stamina = 10
+
+[skills.fireball.cooldown]
+base = 3.0
+
+[skills.fireball.animation]
+name = "cast_fireball"
+cast_time = 1.0
+projectile = "fireball"
+projectile_speed = 15.0
+explosion_radius = 2.0
+
+[skills.fireball.triggers]
+voice_keywords = ["火球", "火球术", "fireball"]
+gesture_required = false
+keybind = "Digit4"
+
+[skills.fireball.unlock]
+class = "Mage"
+level = 5
+skill_points = 3
+
+# ============================================
+# 终极技能
+# ============================================
+
+[skills.star_burst]
+name = "星爆气流斩"
+name_en = "Star Burst Stream"
+description = "传说中的16连击剑技"
+damage_type = "Physical"
+element = "Light"
+
+[skills.star_burst.damage]
+base = 100
+hits = 16
+final_hit_multiplier = 5.0
+
+[skills.star_burst.cost]
+mp = 200
+stamina = 100
+
+[skills.star_burst.cooldown]
+base = 60.0
+
+[skills.star_burst.animation]
+name = "ultimate_star_burst"
+duration = 4.0
+
+[skills.star_burst.triggers]
+voice_keywords = ["星爆", "星爆气流斩", "star burst"]
+gesture_required = true
+keybind = "KeyR"
+
+[skills.star_burst.unlock]
+level = 50
+skill_points = 10
+quest_required = "legendary_sword_master"

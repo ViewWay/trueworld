@@ -1,0 +1,108 @@
+[workspace]
+resolver = "2"
+members = [
+    # Crates
+    "crates/core",
+    "crates/protocol",
+    "crates/server",
+    "crates/client",
+
+    # AI Crates
+    "crates/ai/perception",
+    "crates/ai/asr",
+    "crates/ai/nlp",
+    "crates/ai/action",
+
+    # Bevy Plugins
+    "crates/bevy/input-fusion",
+    "crates/bevy/combat",
+    "crates/bevy/character",
+    "crates/bevy/voice-camera",
+
+    # Network Layer
+    "crates/network/renet-adapter",
+    "crates/network/p2p",
+    "crates/network/voice-chat",
+
+    # Services
+    "services/signaling",
+    "services/matchmaker",
+    # "services/ai-inference", # TODO: Re-enable when candle dependencies are fixed
+]
+
+[workspace.package]
+version = "0.1.0-alpha"
+edition = "2021"
+authors = ["TrueWorld Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/trueworld/trueworld"
+
+[workspace.dependencies]
+# Core
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bincode = "1.3"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Async
+tokio = { version = "1.40", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Networking
+renet = "1.2"
+renet_visualizer = "1.0"
+renet_netcode = "1.2"
+axum = "0.7"
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+redis = { version = "0.26", features = ["tokio-comp", "connection-manager"] }
+
+# UUID
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Math
+glam = "0.29"
+nalgebra = "0.33"
+
+# Utilities
+derive_more = { version = "1.0", features = ["from", "display", "error"] }
+strum = { version = "0.26", features = ["derive"] }
+crossbeam = "0.8"
+rayon = "1.10"
+
+# Configuration
+config = "0.14"
+toml = "0.8"
+
+# Bevy 0.15 (stable)
+bevy = { version = "0.15", default-features = false }
+bevy_ecs = "0.15"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+strip = true
+
+[profile.release.package."*"]
+opt-level = 3
+strip = true

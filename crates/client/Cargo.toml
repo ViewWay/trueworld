@@ -1,0 +1,83 @@
+[package]
+name = "trueworld-client"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "trueworld"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+trueworld-core = { path = "../core" }
+trueworld-protocol = { path = "../protocol" }
+
+# Bevy
+bevy = { workspace = true, features = [
+    "dynamic_linking",
+    "bevy_asset",
+    "bevy_scene",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_pbr",
+    "bevy_gltf",
+    "bevy_animation",
+    "png",
+    "jpeg",
+    "hdr",
+    "ktx2",
+] }
+
+# Bevy 插件 (本地)
+bevy-input-fusion = { path = "../bevy/input-fusion" }
+bevy-combat = { path = "../bevy/combat" }
+bevy-character = { path = "../bevy/character" }
+bevy-voice-camera = { path = "../bevy/voice-camera" }
+
+# AI
+trueworld-perception = { path = "../ai/perception" }
+trueworld-asr = { path = "../ai/asr" }
+trueworld-nlp = { path = "../ai/nlp" }
+trueworld-action = { path = "../ai/action" }
+
+# 网络
+renet.workspace = true
+renet_netcode.workspace = true
+renet_visualizer.workspace = true
+
+# 序列化
+serde.workspace = true
+bincode.workspace = true
+
+# 异步
+tokio.workspace = true
+async-channel = "2.3"
+
+# 错误
+thiserror.workspace = true
+anyhow.workspace = true
+
+# 日志
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# UI (可选)
+bevy_egui = { version = "0.29", optional = true }
+bevy_mod_picking = { version = "0.20", optional = true }
+
+# 工具
+derive_more.workspace = true
+strum.workspace = true
+
+# 性能
+tracing-tracy = { version = "0.11", optional = true }
+
+[features]
+default = []
+egui = ["bevy_egui"]
+picking = ["bevy_mod_picking"]
+tracy = ["tracing-tracy"]
+dev = ["bevy/file_watcher", "bevy/dynamic_linking"]

@@ -1,0 +1,272 @@
+# TrueWorld - Monsters Configuration
+# 怪物定义文件
+
+# ============================================
+# 1级区域怪物
+# ============================================
+
+[monsters.slime]
+name = "史莱姆"
+name_en = "Slime"
+monster_type = "Normal"
+level = 1
+icon = "monsters/slime.png"
+model = "monsters/slime/slime.glb"
+
+[monsters.slime.stats]
+hp = 50
+attack = 10
+defense = 0
+magic_resist = 0
+speed = 2.0
+aggro_range = 3.0
+attack_range = 1.0
+
+[monsters.slime.behavior]
+ai_type = "Passive"
+patrol = false
+flee_on_low_hp = false
+
+[monsters.slime.drops]
+exp = 10
+gold_min = 1
+gold_max = 5
+items = [
+    { id = "slime_gel", chance = 0.5, quantity = [1, 2] },
+    { id = "health_potion_small", chance = 0.01, quantity = [1, 1] }
+]
+
+[monsters.slime.respawn]
+time = 60  # 秒
+
+# ============================================
+
+[monsters.forest_wolf]
+name = "森林狼"
+name_en = "Forest Wolf"
+monster_type = "Normal"
+level = 3
+model = "monsters/wolf/wolf.glb"
+
+[monsters.forest_wolf.stats]
+hp = 120
+attack = 25
+defense = 5
+speed = 4.0
+aggro_range = 8.0
+attack_range = 2.0
+
+[monsters.forest_wolf.behavior]
+ai_type = "Aggressive"
+patrol = true
+pack_hunting = true
+
+[monsters.forest_wolf.drops]
+exp = 30
+gold_min = 5
+gold_max = 15
+items = [
+    { id = "wolf_fang", chance = 0.3, quantity = [1, 2] },
+    { id = "wolf_pelt", chance = 0.5, quantity = [1, 1] }
+]
+
+# ============================================
+
+[monsters.goblin]
+name = "哥布林"
+name_en = "Goblin"
+monster_type = "Normal"
+level = 5
+model = "monsters/goblin/goblin.glb"
+
+[monsters.goblin.stats]
+hp = 80
+attack = 20
+defense = 5
+speed = 3.5
+aggro_range = 6.0
+attack_range = 1.5
+
+[monsters.goblin.behavior]
+ai_type = "Aggressive"
+uses_weapons = true
+flee_on_low_hp = true
+
+[monsters.goblin.drops]
+exp = 50
+gold_min = 10
+gold_max = 30
+items = [
+    { id = "goblin_ear", chance = 0.2, quantity = [1, 1] },
+    { id = "iron_sword", chance = 0.01, quantity = [1, 1] }
+]
+
+# ============================================
+# 精英怪物
+# ============================================
+
+[monsters.alpha_wolf]
+name = "狼王"
+name_en = "Alpha Wolf"
+monster_type = "Elite"
+level = 10
+model = "monsters/wolf/alpha_wolf.glb"
+
+[monsters.alpha_wolf.stats]
+hp = 500
+attack = 50
+defense = 15
+speed = 5.0
+aggro_range = 15.0
+attack_range = 2.5
+
+[monsters.alpha_wolf.behavior]
+ai_type = "Aggressive"
+summons_wolves = true
+howl_buffs_allies = true
+
+[monsters.alpha_wolf.drops]
+exp = 500
+gold_min = 100
+gold_max = 200
+items = [
+    { id = "alpha_fang", chance = 0.5, quantity = [1, 1] },
+    { id = "wolf_pelt", chance = 1.0, quantity = [3, 5] }
+]
+
+# ============================================
+# Boss 怪物
+# ============================================
+
+[monsters.forest_guardian]
+name = "森林守护者"
+name_en = "Forest Guardian"
+monster_type = "Boss"
+level = 15
+model = "monsters/boss/forest_guardian.glb"
+
+[monsters.forest_guardian.stats]
+hp = 5000
+attack = 100
+defense = 30
+speed = 4.0
+aggro_range = 20.0
+attack_range = 5.0
+
+[monsters.forest_guardian.behavior]
+ai_type = "Boss"
+phases = 3
+
+[monsters.forest_guardian.phase1]
+abilities = ["root_attack", "vine_whip"]
+hp_threshold = 0.66
+
+[monsters.forest_guardian.phase2]
+abilities = ["forest_wrath", "summon_treants"]
+hp_threshold = 0.33
+
+[monsters.forest_guardian.phase3]
+abilities = ["ultimate_nature", "enrage"]
+hp_threshold = 0.0
+
+[monsters.forest_guardian.drops]
+exp = 5000
+gold_min = 1000
+gold_max = 2000
+items = [
+    { id = "forest_heart", chance = 0.3, quantity = [1, 1] },
+    { id = "guardian_sword", chance = 0.1, quantity = [1, 1] },
+    { id = "guardian_armor", chance = 0.1, quantity = [1, 1] }
+]
+
+# 特殊掉落
+[monsters.forest_guardian.special_drops.first_time]
+items = [
+    { id = "title_forest_slayer", chance = 1.0, quantity = [1, 1] }
+]
+
+# ============================================
+# 高级怪物
+# ============================================
+
+[monsters.dragon_wyrmling]
+name = "幼龙"
+name_en = "Dragon Wyrmling"
+monster_type = "Elite"
+level = 30
+model = "monsters/dragon/wyrmling.glb"
+
+[monsters.dragon_wyrmling.stats]
+hp = 2000
+attack = 150
+defense = 40
+magic_resist = 50
+speed = 6.0
+
+[monsters.dragon_wyrmling.behavior]
+ai_type = "Aggressive"
+flies = true
+breath_weapon = "fire"
+
+[monsters.dragon_wyrmling.skills]
+fire_breath = { damage = 200, range = 10, cone = 45 }
+tail_swipe = { damage = 100, knockback = 5.0 }
+
+[monsters.dragon_wyrmling.drops]
+exp = 2000
+gold_min = 500
+gold_max = 1000
+items = [
+    { id = "dragon_scale", chance = 0.8, quantity = [1, 3] },
+    { id = "dragon_bone", chance = 0.5, quantity = [1, 2] }
+]
+
+# ============================================
+# 世界 Boss
+# ============================================
+
+[monsters.world_boss.dragonlord]
+name = "龙皇"
+name_en = "Dragonlord"
+monster_type = "Boss"
+level = 100
+model = "monsters/boss/dragonlord.glb"
+
+[monsters.world_boss.dragonlord.stats]
+hp = 100000
+attack = 500
+defense = 100
+magic_resist = 150
+speed = 8.0
+
+[monsters.world_boss.dragonlord.behavior]
+ai_type = "Boss"
+phases = 5
+
+# 基础攻击
+[monsters.world_boss.dragonlord.basic_attacks]
+melee = { damage = 800, range = 8 }
+fire_breath = { damage = 1200, range = 30, cone = 60 }
+tail_ail = { damage = 600, aoe = true }
+
+# 技能
+[monsters.world_boss.dragonlord.skills]
+summon_minions = { count = 10, type = "drake" }
+enrage = { trigger = 0.5, stats_boost = 2.0 }
+devastation = { damage = 2000, aoe = true }
+time_stop = { duration = 3 }  # 停止玩家
+
+[monsters.world_boss.dragonlord.drops]
+exp = 50000
+gold_min = 10000
+gold_max = 20000
+items = [
+    { id = "dragonlord_heart", chance = 0.5, quantity = [1, 1] },
+    { id = "legendary_dragon_sword", chance = 0.1, quantity = [1, 1] },
+    { id = "title_dragonslayer", chance = 0.05, quantity = [1, 1] }
+]
+
+# 世界公告
+[monsters.world_boss.dragonlord.announcement]
+first_kill = true
+drops_unique_title = true

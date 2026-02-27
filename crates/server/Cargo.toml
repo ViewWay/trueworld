@@ -1,0 +1,62 @@
+[package]
+name = "trueworld-server"
+version.workspace = true
+edition.workspace = true
+
+[[bin]]
+name = "trueworld-server"
+path = "src/main.rs"
+
+[dependencies]
+# Core
+trueworld-core = { path = "../core" }
+trueworld-protocol = { path = "../protocol" }
+
+# 网络
+renet.workspace = true
+renet_netcode.workspace = true
+renet_visualizer.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tower-http.workspace = true
+
+# 序列化
+serde.workspace = true
+serde_json.workspace = true
+bincode.workspace = true
+
+# 数据库
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
+redis = { version = "0.26", features = ["tokio-comp", "connection-manager"] }
+
+# 异步
+async-trait.workspace = true
+futures.workspace = true
+
+# 时间
+chrono.workspace = true
+
+# 错误
+thiserror.workspace = true
+anyhow.workspace = true
+
+# 日志
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# 工具
+derive_more.workspace = true
+strum.workspace = true
+
+# 性能
+parking_lot = "0.12"
+crossbeam.workspace = true
+rayon.workspace = true
+
+# 配置
+config = "0.14"
+toml = "0.8"
+
+# 指标
+prometheus = { version = "0.13", optional = true }
+metrics = { version = "0.23", optional = true }

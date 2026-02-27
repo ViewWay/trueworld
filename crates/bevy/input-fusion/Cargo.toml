@@ -1,0 +1,30 @@
+[package]
+name = "bevy-input-fusion"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy.workspace = true
+bevy_ecs.workspace = true
+
+# AI Bridge
+trueworld-perception = { path = "../../ai/perception" }
+trueworld-asr = { path = "../../ai/asr" }
+trueworld-nlp = { path = "../../ai/nlp" }
+trueworld-action = { path = "../../ai/action" }
+
+# Core
+trueworld-core = { path = "../../core" }
+
+# 序列化
+serde.workspace = true
+
+# 异步
+tokio.workspace = true
+async-channel = "2.3"
+
+# 错误
+thiserror.workspace = true
+
+# 日志
+tracing.workspace = true

@@ -1,0 +1,24 @@
+# IDE
+.idea/
+.vscode/
+.claude/
+
+# Memory
+.mem/
+.tasks/
+
+# Build
+target/
+Cargo.lock
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Debug
+*.log
+
+# AI models cache
+models/*.bin
+models/*.gguf
+*.safetensors

@@ -1,0 +1,13 @@
+[package]
+name = "trueworld-perception"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+trueworld-core = { path = "../../core" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+image = "0.25"

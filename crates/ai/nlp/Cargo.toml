@@ -1,0 +1,10 @@
+[package]
+name = "trueworld-nlp"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+trueworld-core = { path = "../../core" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

@@ -1,0 +1,13 @@
+[package]
+name = "bevy-voice-camera"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+trueworld-core = { path = "../../core" }
+trueworld-perception = { path = "../../ai/perception" }
+trueworld-asr = { path = "../../ai/asr" }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
