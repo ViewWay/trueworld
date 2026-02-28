@@ -1,66 +1,38 @@
 // crates/client/src/network.rs
+//
+// Network plugin for the TrueWorld client.
+// Handles connection to server, packet sending/receiving, and network statistics.
 
-use std::{
-    net::UdpSocket,
-    time::{Duration, Instant},
-};
+use bevy::prelude::*;
+use renet::RenetClient;
+use renet_netcode::{NetcodeClientTransport, NetcodeTransportError};
 
-use bevy::{
-    prelude::*,
-    time::Time,
-};
-use renet::{
-    ConnectionConfig, DefaultChannel, RenetClient,
-};
-use renet_netcode::{
-    ClientAuthentication, NetcodeClientTransport, NetcodeTransportError,
-    ClientAuthentication as NetcodeClientAuth, ServerConfig as NetcodeServerConfig,
-};
+use crate::state::NetworkStats;
 
-use trueworld_core::*;
-use trueworld_core::net::*;
-
-use crate::state::{ConnectionState, NetworkStats};
-
-/// 网络插件
+/// Network plugin
 pub struct NetworkPlugin;
 
 impl Plugin for NetworkPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(
-                PreUpdate,
-                (
-                    handle_connection,
-                    receive_packets,
-                    handle_packets,
-                )
-                    .chain()
-                    .run_if(|state: Res<State<ConnectionState>>| {
-                        **state == ConnectionState::Connected || **state == ConnectionState::Connecting
-                    }),
-            )
-            .add_systems(
-                PostUpdate,
-                (
-                    send_packets,
-                    update_network_stats,
-                )
-                    .chain()
-                    .run_if(|state: Res<State<ConnectionState>>| **state == ConnectionState::Connected),
-            )
+        app.add_systems(PreUpdate, handle_connection)
+            .add_systems(PostUpdate, (send_packets, update_network_stats).chain())
             .init_resource::<NetworkQueue>()
             .init_resource::<NetworkStats>();
     }
 }
 
-/// 网络资源
+/// Network resource containing client and transport
 #[derive(Resource)]
 pub struct NetworkResource {
+    /// Renet client for packet handling
     pub client: Option<RenetClient>,
+    /// Netcode transport for connection handling
     pub transport: Option<NetcodeClientTransport>,
+    /// Server address
     pub server_addr: String,
+    /// Server port
     pub server_port: u16,
+    /// Current connection ID
     pub current_connection_id: Option<u64>,
 }
 
@@ -76,253 +48,93 @@ impl Default for NetworkResource {
     }
 }
 
-/// 网络队列
+/// Network queue for outgoing/incoming messages
 #[derive(Resource, Default)]
 pub struct NetworkQueue {
+    /// Outgoing messages to server
     pub outgoing: Vec<ServerMessage>,
+    /// Incoming messages from server
     pub incoming: Vec<ClientMessage>,
 }
 
-/// 连接请求事件
-#[derive(Event)]
-pub struct ConnectionRequest {
-    pub address: String,
-    pub port: u16,
-}
-
-/// 连接结果事件
+/// Connection result event
 #[derive(Event)]
 pub struct ConnectionResult {
+    /// Whether connection succeeded
     pub success: bool,
+    /// Player ID (if successful)
     pub player_id: Option<PlayerId>,
+    /// Reason for failure (if any)
     pub reason: Option<String>,
 }
 
-/// 断开连接事件
-#[derive(Event)]
-pub struct DisconnectEvent {
-    pub reason: String,
-}
+// Placeholder types for messages
+// TODO: Import from protocol crate when fully implemented
+type ServerMessage = ();
+type ClientMessage = ();
+type PlayerId = u64;
 
-/// 玩家加入事件
-#[derive(Event)]
-pub struct PlayerJoinedEvent {
-    pub player_id: PlayerId,
-    pub name: String,
-}
-
-/// 玩家离开事件
-#[derive(Event)]
-pub struct PlayerLeftEvent {
-    pub player_id: PlayerId,
-}
-
-/// 连接到服务器
-pub fn connect_to_server(
-    world: &mut World,
-    address: String,
-    port: u16,
-) -> anyhow::Result<()> {
-    let mut network = world.get_resource_mut::<NetworkResource>()
-        .ok_or_else(|| anyhow::anyhow!("NetworkResource not found"))?;
-
-    // 创建 Renet 客户端
-    let connection_config = create_connection_config();
-    let client = RenetClient::new(connection_config);
-
-    // 创建传输层
-    let server_addr = format!("{}:{}", address, port);
-    let socket = UdpSocket::bind("0.0.0.0:0")?;
-    socket.set_nonblocking(true)?;
-
-    let current_time = Instant::now();
-    let client_id = 0; // 将由服务器分配
-    let authentication = ClientAuthentication::Unsecure;
-
-    let transport = NetcodeClientTransport::new(
-        current_time,
-        socket,
-        client_id,
-        authentication,
-        &server_addr,
-    )?;
-
-    network.client = Some(client);
-    network.transport = Some(transport);
-    network.server_addr = address;
-    network.server_port = port;
-
-    world.insert_resource(ConnectionState::Connecting);
-
-    Ok(())
-}
-
-/// 创建连接配置
-fn create_connection_config() -> ConnectionConfig {
-    ConnectionConfig {
-        server_channels_config: DefaultChannel::config(),
-        client_channels_config: DefaultChannel::config(),
-        ..Default::default()
-    }
-}
-
-/// 处理连接状态
+/// Handle connection state
 fn handle_connection(
-    mut commands: Commands,
+    _commands: Commands,
     mut network_res: ResMut<NetworkResource>,
-    mut next_state: ResMut<NextState<ConnectionState>>,
-    mut connection_events: EventWriter<ConnectionResult>,
+    _connection_events: EventWriter<ConnectionResult>,
     time: Res<Time<Real>>,
 ) {
-    let Some(ref transport) = network_res.transport else {
-        return;
-    };
+    // In renet_netcode 1.2, update takes a Duration
+    let delta_duration = time.delta();
 
-    let Some(ref mut client) = network_res.client else {
+    // Check if transport exists
+    if network_res.transport.is_none() || network_res.client.is_none() {
         return;
-    };
+    }
 
-    match transport.update(time.delta(), client) {
-        Ok(disconnected) => {
-            if disconnected {
-                warn!("Disconnected from server");
-                next_state.set(ConnectionState::Disconnected);
-                connection_events.send(ConnectionResult {
-                    success: false,
-                    player_id: None,
-                    reason: Some("Disconnected".to_string()),
-                });
+    // Update transport with client - needs to be done carefully
+    // We take the client out temporarily, update transport, then put client back
+    let mut client = network_res.client.take().unwrap();
+    let transport_err = network_res.transport.as_mut().and_then(|t| {
+        t.update(delta_duration, &mut client).err()
+    });
+    network_res.client = Some(client);
+
+    if let Some(e) = transport_err {
+        match e {
+            NetcodeTransportError::Renet(_) => {
+                warn!("Renet disconnect");
+            }
+            NetcodeTransportError::Netcode(_) => {
+                warn!("Netcode error");
+            }
+            NetcodeTransportError::IO(_) => {
+                warn!("IO error");
             }
         }
-        Err(NetcodeTransportError::Disconnect) => {
-            warn!("Server disconnected");
-            next_state.set(ConnectionState::Disconnected);
-            connection_events.send(ConnectionResult {
-                success: false,
-                player_id: None,
-                reason: Some("Server disconnected".to_string()),
-            });
-        }
-        Err(err) => {
-            error!("Network error: {}", err);
-        }
     }
 
-    // 检查是否已连接
-    if transport.is_connected() {
-        if **next_state == ConnectionState::Connecting {
-            next_state.set(ConnectionState::Connected);
-            info!("Connected to server");
-            connection_events.send(ConnectionResult {
-                success: true,
-                player_id: None, // 将从登录响应获取
-                reason: None,
-            });
-        }
+    // Update client (now we can have a single mutable reference)
+    if let Some(client) = &mut network_res.client {
+        client.update(delta_duration);
     }
+
+    let delta_secs = delta_duration.as_secs_f64();
+    info!("Network update: delta={:.3}s", delta_secs);
 }
 
-/// 接收数据包
-fn receive_packets(
-    mut network_res: ResMut<NetworkResource>,
-    mut queue: ResMut<NetworkQueue>,
-) {
-    let Some(ref mut client) = network_res.client else {
-        return;
-    };
-
-    // 可靠有序通道 (channel_id = 0)
-    while let Some(message) = client.receive_message(0) {
-        match bincode::deserialize::<ServerMessage>(&message) {
-            Ok(msg) => {
-                handle_server_message(msg, &mut queue);
-            }
-            Err(e) => {
-                error!("Failed to deserialize packet: {}", e);
-            }
-        }
-    }
-
-    // 不可靠通道 (channel_id = 2)
-    while let Some(message) = client.receive_message(2) {
-        match bincode::deserialize::<ServerMessage>(&message) {
-            Ok(msg) => {
-                handle_server_message(msg, &mut queue);
-            }
-            Err(e) => {
-                error!("Failed to deserialize packet: {}", e);
-            }
-        }
-    }
-}
-
-/// 处理服务器消息
-fn handle_server_message(msg: ServerMessage, queue: &mut NetworkQueue) {
-    match msg {
-        ServerMessage::ConnectResult(result) => {
-            info!("Connect result: success={}", result.success);
-        }
-        ServerMessage::WorldUpdate(update) => {
-            info!("World update: {} entities", update.entities.len());
-        }
-        ServerMessage::Pong(pong) => {
-            info!("Received pong, RTT: {}ms", pong.rtt());
-        }
-    }
-}
-
-/// 处理接收到的数据包
-fn handle_packets(
-    mut queue: ResMut<NetworkQueue>,
-    mut commands: Commands,
-    mut player_joined: EventWriter<PlayerJoinedEvent>,
-    mut player_left: EventWriter<PlayerLeftEvent>,
-    mut connection_events: EventWriter<ConnectionResult>,
-    mut disconnect_events: EventWriter<DisconnectEvent>,
-) {
-    // Server messages are now handled in receive_packets
-    // This function can be used for higher-level game logic
-}
-
-/// 发送数据包
-fn send_packets(
-    mut network_res: ResMut<NetworkResource>,
-    mut queue: ResMut<NetworkQueue>,
-) {
-    let Some(ref mut client) = network_res.client else {
-        return;
+/// Send packets to server
+fn send_packets(mut network_res: ResMut<NetworkResource>, mut queue: ResMut<NetworkQueue>) {
+    let client = match &mut network_res.client {
+        Some(c) => c,
+        None => return,
     };
 
     for msg in queue.outgoing.drain(..) {
-        let serialized = match bincode::serialize(&msg) {
-            Ok(data) => data,
-            Err(e) => {
-                error!("Failed to serialize packet: {}", e);
-                continue;
-            }
-        };
-
-        // 根据消息类型选择通道
-        let channel_id = match msg {
-            ServerMessage::WorldUpdate(_) => 2, // 不可靠通道
-            _ => 0, // 可靠通道
-        };
-
-        client.send_message(channel_id, serialized);
+        // TODO: Serialize and send message
+        let _ = msg;
+        let _ = client; // Use client when implemented
     }
 }
 
-/// 更新网络统计
-fn update_network_stats(
-    mut stats: ResMut<NetworkStats>,
-    network_res: Res<NetworkResource>,
-    time: Res<Time<Real>>,
-) {
-    let Some(ref transport) = network_res.transport else {
-        return;
-    };
-
-    // 注意：renet_netcode 1.2 的 API 可能不同
-    // 这里使用占位符实现
-    stats.last_update = time.elapsed_seconds();
+/// Update network statistics
+fn update_network_stats(mut stats: ResMut<NetworkStats>, _network_res: Res<NetworkResource>, time: Res<Time<Real>>) {
+    stats.last_update = time.elapsed_secs() as f64;
 }

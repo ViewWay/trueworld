@@ -5,9 +5,15 @@ mod state;
 mod network;
 mod input;
 
-use app::TrueWorldApp;
+use app::TrueWorldClient;
 
-fn main() {
-    // TODO: Initialize and run the TrueWorld client application
-    println!("TrueWorld Client - Coming soon!");
+fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
+    let client = TrueWorldClient::new()?;
+    client.run();
+
+    Ok(())
 }

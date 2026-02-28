@@ -66,26 +66,17 @@ renet_netcode = "1.2"
 axum = "0.7"
 tower-http = { version = "0.5", features = ["cors", "fs"] }
 
-# Database
-sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "chrono", "uuid"] }
-redis = { version = "0.26", features = ["tokio-comp", "connection-manager"] }
-
 # UUID
 uuid = { version = "1.10", features = ["v4", "serde"] }
 
 # Math
 glam = "0.29"
-nalgebra = "0.33"
 
 # Utilities
 derive_more = { version = "1.0", features = ["from", "display", "error"] }
 strum = { version = "0.26", features = ["derive"] }
 crossbeam = "0.8"
 rayon = "1.10"
-
-# Configuration
-config = "0.14"
-toml = "0.8"
 
 # Bevy 0.15 (stable)
 bevy = { version = "0.15", default-features = false }

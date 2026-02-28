@@ -14,10 +14,9 @@ pub use channel::*;
 use renet::ChannelConfig;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use trueworld_core::*;
 
 /// Protocol-specific errors
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ProtocolError {
     #[error("Invalid packet ID: {0}")]
     InvalidPacketId(u8),

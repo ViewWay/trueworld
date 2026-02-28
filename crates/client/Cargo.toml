@@ -29,6 +29,7 @@ bevy = { workspace = true, features = [
     "jpeg",
     "hdr",
     "ktx2",
+    "bevy_state",
 ] }
 
 # Bevy 插件 (本地)

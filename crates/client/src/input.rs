@@ -1,10 +1,11 @@
 // crates/client/src/input.rs
-
-use std::time::Instant;
+//
+// Input collection and processing for the TrueWorld client.
+// Collects keyboard, mouse, and gamepad input and converts it to PlayerInput.
 
 use bevy::{
     input::{
-        gamepad::{Gamepad, GamepadButton, GamepadButtonChangedEvent},
+        gamepad::Gamepad,
         keyboard::KeyCode,
         mouse::{MouseButton, MouseMotion},
         ButtonInput,
@@ -12,96 +13,86 @@ use bevy::{
     prelude::*,
 };
 
-use trueworld_core::*;
+use trueworld_core::{InputAction, PlayerInput};
 
 use crate::state::{ClientConfig, InputConfig};
 
-/// 输入插件
+/// Input plugin for collecting player input
 pub struct InputPlugin;
 
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .init_resource::<InputState>()
-            .add_systems(
-                Update,
-                (
-                    collect_keyboard_input,
-                    collect_mouse_input,
-                    collect_gamepad_input,
-                    update_input_state,
-                )
-                    .chain(),
-            );
+        app.init_resource::<InputState>().add_systems(
+            Update,
+            (
+                collect_keyboard_input,
+                collect_mouse_input,
+                collect_gamepad_input,
+                update_input_state,
+            )
+                .chain(),
+        );
     }
 }
 
-/// 输入状态
+/// Collected input state
 #[derive(Resource, Default)]
 pub struct InputState {
-    /// 当前帧的输入
+    /// Current frame's input
     pub current: PlayerInput,
 
-    /// 上一帧的输入
+    /// Previous frame's input
     pub previous: PlayerInput,
 
-    /// 输入序列号
+    /// Input sequence number
     pub sequence: u32,
 
-    /// 按键状态
+    /// Current key states
     pub keys: ButtonInput<KeyCode>,
 
-    /// 鼠标按钮状态
+    /// Mouse button states
     pub mouse_buttons: ButtonInput<MouseButton>,
 
-    /// 游戏手柄按钮状态
-    pub gamepad_buttons: Vec<(Gamepad, ButtonInput<GamepadButton>)>,
+    /// Connected gamepads
+    pub connected_gamepads: Vec<Gamepad>,
 
-    /// 鼠标位置
+    /// Mouse position
     pub mouse_position: Vec2,
 
-    /// 鼠标移动增量
+    /// Mouse movement delta
     pub mouse_delta: Vec2,
 
-    /// 鼠标滚轮
+    /// Mouse wheel scroll
     pub mouse_wheel: f32,
-
-    /// 时间戳
-    pub timestamp: Instant,
 }
 
 impl InputState {
-    /// 是否按下某个键
+    /// Check if a key is pressed
     pub fn pressed(&self, key: KeyCode) -> bool {
         self.keys.pressed(key)
     }
 
-    /// 是否刚按下某个键
+    /// Check if a key was just pressed
     pub fn just_pressed(&self, key: KeyCode) -> bool {
         self.keys.just_pressed(key)
     }
 
-    /// 是否刚释放某个键
+    /// Check if a key was just released
     pub fn just_released(&self, key: KeyCode) -> bool {
         self.keys.just_released(key)
     }
 
-    /// 是否按下某个鼠标按钮
+    /// Check if a mouse button is pressed
     pub fn mouse_pressed(&self, button: MouseButton) -> bool {
         self.mouse_buttons.pressed(button)
     }
 
-    /// 是否刚按下某个鼠标按钮
+    /// Check if a mouse button was just pressed
     pub fn mouse_just_pressed(&self, button: MouseButton) -> bool {
         self.mouse_buttons.just_pressed(button)
     }
 
-    /// 是否刚释放某个鼠标按钮
-    pub fn mouse_just_released(&self, button: MouseButton) -> bool {
-        self.mouse_buttons.just_released(button)
-    }
-
-    /// 获取移动方向
+    /// Get the 2D movement direction from keyboard input
     pub fn move_direction(&self) -> Vec2 {
         let mut dir = Vec2::ZERO;
 
@@ -125,27 +116,27 @@ impl InputState {
         dir
     }
 
-    /// 是否在奔跑
+    /// Check if player is sprinting
     pub fn is_sprinting(&self) -> bool {
         self.pressed(KeyCode::ShiftLeft) || self.pressed(KeyCode::ShiftRight)
     }
 
-    /// 是否在蹲伏
+    /// Check if player is crouching
     pub fn is_crouching(&self) -> bool {
         self.pressed(KeyCode::ControlLeft) || self.pressed(KeyCode::KeyC)
     }
 
-    /// 是否在瞄准 (右键)
+    /// Check if player is aiming (right mouse button)
     pub fn is_aiming(&self) -> bool {
         self.mouse_pressed(MouseButton::Right)
     }
 
-    /// 是否在攻击 (左键)
+    /// Check if player is attacking (left mouse button)
     pub fn is_attacking(&self) -> bool {
         self.mouse_pressed(MouseButton::Left)
     }
 
-    /// 获取技能槽索引 (1-0)
+    /// Get the skill slot (1-0) that was just pressed
     pub fn get_skill_slot(&self) -> Option<usize> {
         let skill_keys = [
             KeyCode::Digit1,
@@ -169,7 +160,7 @@ impl InputState {
         None
     }
 
-    /// 获取物品槽索引
+    /// Get the item slot that was just pressed
     pub fn get_item_slot(&self) -> Option<usize> {
         if self.just_pressed(KeyCode::KeyQ) {
             return Some(0);
@@ -181,157 +172,157 @@ impl InputState {
         None
     }
 
-    /// 收集当前输入为 PlayerInput
-    pub fn collect_input(&mut self, config: &InputConfig) -> PlayerInput {
+    /// Collect current input as PlayerInput
+    pub fn collect_input(&mut self, _config: &InputConfig) -> PlayerInput {
         let move_dir = self.move_direction();
 
-        let mut actions = Vec::new();
+        let mut input = PlayerInput::new(self.sequence);
 
-        // 移动
-        if move_dir != Vec2::ZERO {
-            actions.push(InputAction::Move {
-                direction: move_dir,
-            });
+        // Movement - convert 2D direction to 3D movement array
+        input.movement = [move_dir.x, 0.0, move_dir.y];
+
+        // Forward/backward
+        if move_dir.y > 0.0 {
+            input.add_action(InputAction::MoveForward);
+        } else if move_dir.y < 0.0 {
+            input.add_action(InputAction::MoveBackward);
         }
 
-        // 奔跑
+        // Strafe left/right
+        if move_dir.x > 0.0 {
+            input.add_action(InputAction::MoveRight);
+        } else if move_dir.x < 0.0 {
+            input.add_action(InputAction::MoveLeft);
+        }
+
+        // Sprint
         if self.is_sprinting() {
-            actions.push(InputAction::Sprint(true));
+            input.add_action(InputAction::Sprint);
         }
 
-        // 蹲伏
+        // Crouch
         if self.is_crouching() {
-            actions.push(InputAction::Crouch);
+            input.add_action(InputAction::Crouch);
         }
 
-        // 跳跃
+        // Jump
         if self.just_pressed(KeyCode::Space) {
-            actions.push(InputAction::Jump);
+            input.add_action(InputAction::Jump);
         }
 
-        // 攻击
+        // Attack
         if self.is_attacking() {
-            actions.push(InputAction::Attack);
+            input.add_action(InputAction::Attack);
         }
 
-        // 格挡
+        // Block
         if self.is_aiming() {
-            actions.push(InputAction::Block);
+            input.add_action(InputAction::Block);
         }
 
-        // 闪避
+        // Dodge
         if self.just_pressed(KeyCode::AltLeft) {
-            let dodge_dir = if move_dir != Vec2::ZERO {
-                Vec3::new(move_dir.x, 0.0, move_dir.y)
-            } else {
-                Vec3::NEG_Z // 向后闪避
-            };
-            actions.push(InputAction::Dodge {
-                direction: dodge_dir,
-            });
+            input.add_action(InputAction::Dodge);
         }
 
-        // 技能
+        // Skills
         if let Some(slot) = self.get_skill_slot() {
-            if let Some(skill_id) = &config.keybinds.skills.get(slot).and_then(|_| None) {
-                // TODO: 从配置获取技能ID
-                actions.push(InputAction::Skill {
-                    skill_id: format!("skill_{}", slot),
-                    target: None,
-                });
+            match slot {
+                0 => input.add_action(InputAction::Skill1),
+                1 => input.add_action(InputAction::Skill2),
+                2 => input.add_action(InputAction::Skill3),
+                3 => input.add_action(InputAction::Skill4),
+                _ => {}
             }
         }
 
-        // 交互
+        // Interact
         if self.just_pressed(KeyCode::KeyE) {
-            actions.push(InputAction::Interact {
-                target: EntityId::MAX, // TODO: 获取当前目标
-            });
+            input.add_action(InputAction::Interact);
         }
 
-        // 菜单
+        // Use item
+        if self.get_item_slot().is_some() {
+            input.add_action(InputAction::UseItem);
+        }
+
+        // Menu toggles
         if self.just_pressed(KeyCode::Tab) || self.just_pressed(KeyCode::KeyI) {
-            // 打开背包
+            input.add_action(InputAction::ToggleInventory);
         }
 
-        PlayerInput {
-            sequence: self.sequence,
-            tick: 0, // 由服务器填充
-            actions,
-            position: Vec3::ZERO,  // 由玩家状态填充
-            rotation: Quat::IDENTITY, // 由玩家状态填充
+        if self.just_pressed(KeyCode::KeyM) {
+            input.add_action(InputAction::ToggleMap);
         }
+
+        if self.just_pressed(KeyCode::Escape) {
+            input.add_action(InputAction::ToggleMenu);
+        }
+
+        // Set timestamp (using milliseconds since UNIX epoch)
+        use std::time::{SystemTime, UNIX_EPOCH};
+        input.timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_millis() as u64;
+
+        input
     }
 
-    /// 更新到下一帧
+    /// Advance to the next frame
     pub fn advance(&mut self) {
         self.previous = self.current.clone();
         self.sequence = self.sequence.wrapping_add(1);
-        self.timestamp = Instant::now();
 
-        // 重置一次性状态
+        // Reset one-frame state
         self.mouse_delta = Vec2::ZERO;
         self.mouse_wheel = 0.0;
     }
 }
 
-/// 收集键盘输入
-fn collect_keyboard_input(
-    mut input_state: ResMut<InputState>,
-    keys: Res<ButtonInput<KeyCode>>,
-) {
+/// Collect keyboard input
+fn collect_keyboard_input(mut input_state: ResMut<InputState>, keys: Res<ButtonInput<KeyCode>>) {
     input_state.keys = keys.clone();
 }
 
-/// 收集鼠标输入
+/// Collect mouse input
 fn collect_mouse_input(
     mut input_state: ResMut<InputState>,
     buttons: Res<ButtonInput<MouseButton>>,
     mut motion_reader: EventReader<MouseMotion>,
     mut scroll_reader: EventReader<bevy::input::mouse::MouseWheel>,
-    windows: Query<&Window>,
 ) {
     input_state.mouse_buttons = buttons.clone();
 
-    // 鼠标移动
+    // Mouse motion
     for event in motion_reader.read() {
         input_state.mouse_delta += event.delta;
     }
 
-    // 鼠标滚轮
+    // Mouse wheel
     for event in scroll_reader.read() {
         input_state.mouse_wheel += event.y;
     }
 
-    // 鼠标位置
-    if let Ok(window) = windows.get_single() {
-        if let Some(position) = window.cursor_position() {
-            input_state.mouse_position = position;
-        }
-    }
+    // TODO: Mouse position requires window queries
+    // Will be added when bevy_window feature is properly configured
 }
 
-/// 收集游戏手柄输入
+/// Collect gamepad input
 fn collect_gamepad_input(
     mut input_state: ResMut<InputState>,
-    gamepads: Query<(Entity, &Gamepad)>,
-    buttons: Res<ButtonInput<GamepadButton>>,
-    mut axis_events: EventReader<bevy::input::gamepad::GamepadAxisChangedEvent>,
+    gamepads: Query<(), With<Gamepad>>,
 ) {
-    input_state.gamepad_buttons.clear();
-
-    for (entity, gamepad) in gamepads.iter() {
-        let button_input = ButtonInput::<GamepadButton>::default(); // 需要从系统获取
-
-        input_state.gamepad_buttons.push((*gamepad, button_input));
-    }
+    // In Bevy 0.15, we can just count gamepads
+    // The actual gamepad-specific input would be handled in a different system
+    let gamepad_count = gamepads.iter().len();
+    input_state.connected_gamepads.clear();
+    // Reserve space for connected gamepads
+    input_state.connected_gamepads.reserve(gamepad_count);
 }
 
-/// 更新输入状态
-fn update_input_state(
-    mut input_state: ResMut<InputState>,
-    config: Res<ClientConfig>,
-) {
+/// Update input state with collected input
+fn update_input_state(mut input_state: ResMut<InputState>, config: Res<ClientConfig>) {
     input_state.current = input_state.collect_input(&config.input);
     input_state.advance();
 }
