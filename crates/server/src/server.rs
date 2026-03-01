@@ -314,10 +314,10 @@ impl TrueWorldServer {
                         }
 
                         // 更新游戏世界
-                        game_world.update(tick);
+                        game_world.update(tick_duration);
 
                         // 广播状态
-                        let world_update = game_world.create_update_packet(tick);
+                        let world_update = game_world.create_update_packet();
                         game_tx.send(world_update).ok();
 
                         tick += 1;
