@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use trueworld_core::{PlayerId, EntityId, SkillId, ItemId, Vec3, Quat};
+use trueworld_core::{PlayerId, EntityId, SkillId, ItemId, Vec3, Quat, PlayerInput, InputAction};
 
 /// Initial connection packet from client
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -131,9 +131,38 @@ pub struct ClientPing {
     pub sequence: u32,
 }
 
+/// Client input packet for movement system (unreliable channel)
+///
+/// This packet is sent at ~60Hz containing the player's current input state.
+/// The server validates the input and updates the authoritative position.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClientInputPacket {
+    /// Input sequence number for tracking
+    pub sequence: u32,
+    /// Movement direction [x, y, z]
+    pub movement: [f32; 3],
+    /// Action flags (jump, attack, etc.)
+    pub actions: Vec<InputAction>,
+    /// Client timestamp for latency calculation
+    pub timestamp: u64,
+}
+
+impl ClientInputPacket {
+    /// Create a new input packet from PlayerInput
+    pub fn from_player_input(input: &PlayerInput) -> Self {
+        Self {
+            sequence: input.sequence,
+            movement: input.movement,
+            actions: input.actions.clone(),
+            timestamp: input.timestamp,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use trueworld_core::{PlayerInput, InputAction};
 
     #[test]
     fn test_client_input_defaults() {
@@ -141,5 +170,41 @@ mod tests {
         assert_eq!(input.move_direction, Vec3::ZERO);
         assert_eq!(input.look_direction, Vec3::Z);
         assert!(!input.jumping);
+    }
+
+    #[test]
+    fn test_client_input_packet_serialization() {
+        let player_input = PlayerInput {
+            sequence: 42,
+            movement: [1.0, 0.0, -1.0],
+            actions: vec![InputAction::MoveForward, InputAction::Sprint],
+            view_direction: [0.0, 0.0, 0.0],
+            timestamp: 1234567890,
+        };
+
+        let packet = ClientInputPacket::from_player_input(&player_input);
+
+        let bytes = crate::serialize_packet(&packet).unwrap();
+        let decoded: ClientInputPacket = crate::deserialize_packet(&bytes).unwrap();
+
+        assert_eq!(packet.sequence, decoded.sequence);
+        assert_eq!(packet.movement, decoded.movement);
+        assert_eq!(packet.actions.len(), decoded.actions.len());
+    }
+
+    #[test]
+    fn test_client_input_packet_from_player_input() {
+        let mut player_input = PlayerInput::new(100);
+        player_input.movement = [0.5, 0.0, 0.5];
+        player_input.view_direction = [0.0, 0.0, 0.0]; // 添加 view_direction
+        player_input.add_action(InputAction::Jump);
+        player_input.timestamp = 999999;
+
+        let packet = ClientInputPacket::from_player_input(&player_input);
+
+        assert_eq!(packet.sequence, 100);
+        assert_eq!(packet.movement, [0.5, 0.0, 0.5]);
+        assert!(packet.actions.contains(&InputAction::Jump));
+        assert_eq!(packet.timestamp, 999999);
     }
 }

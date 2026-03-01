@@ -5,6 +5,9 @@ mod state;
 mod network;
 mod input;
 mod render;
+mod connection;
+mod net_sync;
+mod movement;
 
 use app::TrueWorldClient;
 

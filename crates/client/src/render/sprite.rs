@@ -295,6 +295,7 @@ fn point_in_triangle(
 }
 
 use crate::render::animation::AnimationController;
+use crate::render::NetworkEntity;
 
 /// Spawn an entity sprite with all required components
 pub fn spawn_entity_sprite(
@@ -340,7 +341,7 @@ pub fn spawn_entity_sprite(
         },
         Transform::from_translation(position.extend(z_index as f32)),
         Visibility::default(),
-        super::NetworkEntity(entity_id),
+        NetworkEntity(entity_id),
         super::sync::NetworkEntityMarker,
         AnimationController::default(),
     )).id()

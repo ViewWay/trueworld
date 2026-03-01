@@ -17,6 +17,9 @@ use crate::{
     input::InputPlugin as ClientInputPlugin,
     network::NetworkPlugin,
     render::EntityRenderPlugin,
+    connection::ConnectionPlugin,
+    net_sync::NetSyncPlugin,
+    movement::ClientMovementPlugin,
     state::GameState,
 };
 
@@ -55,6 +58,9 @@ impl TrueWorldClient {
             ClientInputPlugin,
             NetworkPlugin,
             EntityRenderPlugin,
+            ConnectionPlugin,
+            NetSyncPlugin,
+            ClientMovementPlugin,
         ));
 
         // 添加游戏状态 (Bevy 0.15)

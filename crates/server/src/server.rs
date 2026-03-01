@@ -22,11 +22,11 @@ use trueworld_protocol::*;
 
 use crate::{
     config::ServerConfig,
-    database::{DatabaseManager, PlayerData},
+    database::DatabaseManager,
     game::GameWorld,
-    network::{NetworkPacket, ServerNetwork},
+    network::{NetworkEvent, ServerNetwork, ConnectedClient},
     player::{Player, PlayerSession},
-    room::{Room, RoomManager},
+    room::RoomManager,
     shutdown::ShutdownManager,
 };
 
@@ -165,7 +165,7 @@ impl TrueWorldServer {
     fn spawn_network_task(
         mut renet_server: RenetServer,
         mut transport: NetcodeServerTransport,
-        network_tx: mpsc::UnboundedSender<NetworkPacket>,
+        network_tx: mpsc::UnboundedSender<NetworkEvent>,
         mut game_rx: mpsc::UnboundedReceiver<ServerMessage>,
         shutdown: oneshot::Receiver<()>,
     ) -> JoinHandle<()> {
@@ -185,12 +185,12 @@ impl TrueWorldServer {
                             match event {
                                 ServerEvent::ClientConnected { client_id } => {
                                     info!("Client connected: {}", client_id);
-                                    network_tx.send(NetworkPacket::ClientConnected { client_id })
+                                    network_tx.send(NetworkEvent::ClientConnected { client_id })
                                         .ok();
                                 }
                                 ServerEvent::ClientDisconnected { client_id, reason } => {
                                     info!("Client disconnected: {} - {:?}", client_id, reason);
-                                    network_tx.send(NetworkPacket::ClientDisconnected { client_id })
+                                    network_tx.send(NetworkEvent::ClientDisconnected { client_id, player_id: None })
                                         .ok();
                                 }
                             }
@@ -200,14 +200,14 @@ impl TrueWorldServer {
                         for client_id in renet_server.clients_id() {
                             while let Some(message) = renet_server.receive_message(client_id, 0) {
                                 if let Ok(packet) = bincode::deserialize::<ClientMessage>(&message) {
-                                    network_tx.send(NetworkPacket::Message { client_id, message: packet })
+                                    network_tx.send(NetworkEvent::Message { client_id, message: packet })
                                         .ok();
                                 }
                             }
 
                             while let Some(message) = renet_server.receive_message(client_id, 2) {
                                 if let Ok(packet) = bincode::deserialize::<ClientMessage>(&message) {
-                                    network_tx.send(NetworkPacket::Message { client_id, message: packet })
+                                    network_tx.send(NetworkEvent::Message { client_id, message: packet })
                                         .ok();
                                 }
                             }
@@ -256,7 +256,7 @@ impl TrueWorldServer {
         players: Arc<RwLock<HashMap<PlayerId, Player>>>,
         database: Arc<DatabaseManager>,
         game_tx: mpsc::UnboundedSender<ServerMessage>,
-        mut network_rx: mpsc::UnboundedReceiver<NetworkPacket>,
+        mut network_rx: mpsc::UnboundedReceiver<NetworkEvent>,
         tick_rate: u64,
         shutdown: oneshot::Receiver<()>,
     ) -> JoinHandle<()> {
@@ -279,7 +279,7 @@ impl TrueWorldServer {
                         // 处理网络消息
                         while let Some(packet) = network_rx.recv().await {
                             match packet {
-                                NetworkPacket::ClientConnected { client_id } => {
+                                NetworkEvent::ClientConnected { client_id } => {
                                     // 处理新连接
                                     Self::handle_client_connected(
                                         client_id,
@@ -289,7 +289,7 @@ impl TrueWorldServer {
                                         &game_tx,
                                     ).await;
                                 }
-                                NetworkPacket::ClientDisconnected { client_id } => {
+                                NetworkEvent::ClientDisconnected { client_id, player_id } => {
                                     // 处理断开连接
                                     Self::handle_client_disconnected(
                                         client_id,
@@ -298,7 +298,7 @@ impl TrueWorldServer {
                                         &game_tx,
                                     ).await;
                                 }
-                                NetworkPacket::Message { client_id, message } => {
+                                NetworkEvent::Message { client_id, message } => {
                                     // 处理客户端消息
                                     Self::handle_client_message(
                                         client_id,

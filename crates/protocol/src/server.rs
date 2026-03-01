@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use trueworld_core::{PlayerId, EntityId, SkillId, ServerId, Vec3, Quat};
+use trueworld_core::{PlayerId, EntityId, ServerId, Vec3, Quat};
 
 /// Hello response from server
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,6 +203,51 @@ pub struct ServerKick {
     pub message: String,
 }
 
+/// Server position acknowledgment (unreliable channel)
+///
+/// Sent periodically (~20Hz) to confirm the player's position on the server.
+/// Client uses this for reconciliation with local prediction.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerPositionAck {
+    /// Player ID being acknowledged
+    pub player_id: PlayerId,
+    /// Last confirmed input sequence number
+    pub ack_sequence: u32,
+    /// Authoritative server position
+    pub position: [f32; 3],
+    /// Current velocity
+    pub velocity: [f32; 3],
+    /// Server timestamp
+    pub server_time: u64,
+}
+
+/// Position correction (reliable channel - critical)
+///
+/// Sent when server needs to forcibly correct client position
+/// (e.g., after collision detection or anti-cheat).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServerPositionCorrection {
+    /// Player ID being corrected
+    pub player_id: PlayerId,
+    /// Correct position (immediate jump)
+    pub correct_position: [f32; 3],
+    /// Reason for correction
+    pub reason: CorrectionReason,
+}
+
+/// Reason for position correction
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CorrectionReason {
+    /// Client moved too fast (speed limit exceeded)
+    SpeedLimitExceeded,
+    /// Collision detected (client in wall)
+    Collision,
+    /// Server rollback (state mismatch)
+    ServerRollback,
+    /// Teleport (gameplay mechanic)
+    Teleport,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -223,5 +268,45 @@ mod tests {
 
         assert_eq!(welcome.player_id, decoded.player_id);
         assert_eq!(welcome.tick_rate, decoded.tick_rate);
+    }
+
+    #[test]
+    fn test_position_ack_serialization() {
+        let ack = ServerPositionAck {
+            player_id: PlayerId::new(42),
+            ack_sequence: 123,
+            position: [10.0, 0.0, 20.0],
+            velocity: [1.0, 0.0, 0.5],
+            server_time: 9876543210,
+        };
+
+        let bytes = crate::serialize_packet(&ack).unwrap();
+        let decoded: ServerPositionAck = crate::deserialize_packet(&bytes).unwrap();
+
+        assert_eq!(ack.player_id, decoded.player_id);
+        assert_eq!(ack.ack_sequence, decoded.ack_sequence);
+        assert_eq!(ack.position, decoded.position);
+    }
+
+    #[test]
+    fn test_position_correction_serialization() {
+        let correction = ServerPositionCorrection {
+            player_id: PlayerId::new(42),
+            correct_position: [15.0, 0.0, 25.0],
+            reason: CorrectionReason::Collision,
+        };
+
+        let bytes = crate::serialize_packet(&correction).unwrap();
+        let decoded: ServerPositionCorrection = crate::deserialize_packet(&bytes).unwrap();
+
+        assert_eq!(correction.player_id, decoded.player_id);
+        assert_eq!(correction.correct_position, decoded.correct_position);
+        assert_eq!(correction.reason, decoded.reason);
+    }
+
+    #[test]
+    fn test_correction_reason_variants() {
+        assert_eq!(CorrectionReason::SpeedLimitExceeded, CorrectionReason::SpeedLimitExceeded);
+        assert_ne!(CorrectionReason::Collision, CorrectionReason::Teleport);
     }
 }
