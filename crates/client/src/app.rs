@@ -16,6 +16,7 @@ use bevy::{
 use crate::{
     input::InputPlugin as ClientInputPlugin,
     network::NetworkPlugin,
+    render::EntityRenderPlugin,
     state::GameState,
 };
 
@@ -53,6 +54,7 @@ impl TrueWorldClient {
         app.add_plugins((
             ClientInputPlugin,
             NetworkPlugin,
+            EntityRenderPlugin,
         ));
 
         // 添加游戏状态 (Bevy 0.15)

@@ -4,6 +4,7 @@ mod app;
 mod state;
 mod network;
 mod input;
+mod render;
 
 use app::TrueWorldClient;
 
