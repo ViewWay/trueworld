@@ -6,6 +6,7 @@ mod config;
 mod database;
 mod entity;
 mod game;
+mod movement;
 mod network;
 mod player;
 mod room;
