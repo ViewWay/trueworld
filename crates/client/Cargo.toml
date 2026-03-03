@@ -30,6 +30,7 @@ bevy = { workspace = true, features = [
     "hdr",
     "ktx2",
     "bevy_state",
+    "bevy_winit",  # 窗口支持
 ] }
 
 # Bevy 插件 (本地)

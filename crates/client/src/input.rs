@@ -24,16 +24,18 @@ pub struct InputPlugin;
 
 impl Plugin for InputPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<InputState>().add_systems(
-            Update,
-            (
-                collect_keyboard_input,
-                collect_mouse_input,
-                collect_gamepad_input,
-                update_input_state,
-            )
-                .chain(),
-        );
+        app.init_resource::<ClientConfig>()
+            .init_resource::<InputState>()
+            .add_systems(
+                Update,
+                (
+                    collect_keyboard_input,
+                    collect_mouse_input,
+                    collect_gamepad_input,
+                    update_input_state,
+                )
+                    .chain(),
+            );
     }
 }
 
