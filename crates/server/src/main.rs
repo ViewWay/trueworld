@@ -13,8 +13,7 @@ mod room;
 mod server;
 mod shutdown;
 
-use std::time::Duration;
-use tracing::{info, warn, error, Level};
+use tracing::{info, Level};
 use tracing_subscriber::{EnvFilter, fmt};
 
 use server::TrueWorldServer;

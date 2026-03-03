@@ -7,17 +7,7 @@ mod config;
 mod validation;
 mod update;
 
-pub use config::{
-    ServerMovementConfig,
-    PlayerViolationTracker,
-    ViolationManager,
-};
 
-pub use validation::{
-    ValidationResult,
-    ServerPlayerMovement,
-    MovementValidator,
-};
 
 pub use update::{
     MovementUpdateProcessor,

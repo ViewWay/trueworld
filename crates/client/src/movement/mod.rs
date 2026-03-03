@@ -12,11 +12,7 @@ pub mod correction;
 
 // Re-export commonly used types
 pub use plugin::{ClientMovementPlugin, MovementConfig};
-pub use prediction::{PredictedState, InputSnapshot, predict_movement};
-pub use correction::{PositionCorrection, correct_position};
 
-use bevy::prelude::*;
-use trueworld_core::{PlayerInput, EntityId};
 
 /// Maximum input history size (frames)
 pub const MAX_INPUT_HISTORY: usize = 60;

@@ -2,15 +2,11 @@
 
 use bevy::{
     app::{App, Startup},
-    asset::AssetPlugin,
-    diagnostic::{DiagnosticsPlugin, FrameTimeDiagnosticsPlugin},
     prelude::*,
     render::{
         settings::{Backends, RenderCreation, WgpuSettings},
         RenderPlugin,
     },
-    scene::ScenePlugin,
-    time::TimePlugin,
 };
 
 use crate::{
@@ -43,15 +39,6 @@ impl TrueWorldClient {
             render_creation,
             ..Default::default()
         }));
-
-        // 额外插件
-        app.add_plugins((
-            TimePlugin,
-            AssetPlugin::default(),
-            ScenePlugin,
-            DiagnosticsPlugin::default(),
-            FrameTimeDiagnosticsPlugin,
-        ));
 
         // 自定义插件
         app.add_plugins((

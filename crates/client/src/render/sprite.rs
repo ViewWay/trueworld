@@ -5,6 +5,8 @@
 // - Sprite bundle creation and spawning
 // - Color configuration for entities
 
+#![allow(dead_code)]
+
 use bevy::{
     prelude::*,
     render::{
@@ -282,7 +284,7 @@ fn point_in_triangle(
     p2: (f32, f32),
     p3: (f32, f32),
 ) -> bool {
-    let denominator = ((p2.1 - p3.1) * (p1.0 - p3.0) + (p3.0 - p2.0) * (p1.1 - p3.1));
+    let denominator = (p2.1 - p3.1) * (p1.0 - p3.0) + (p3.0 - p2.0) * (p1.1 - p3.1);
     if denominator.abs() < 0.001 {
         return false;
     }

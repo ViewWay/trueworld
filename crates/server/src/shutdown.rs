@@ -1,5 +1,7 @@
 // crates/server/src/shutdown.rs
 
+#![allow(dead_code)]
+
 use tokio::sync::{oneshot, broadcast};
 
 /// Shutdown manager for graceful shutdown

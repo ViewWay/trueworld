@@ -3,19 +3,14 @@
 // Network plugin for the TrueWorld client.
 // Handles connection to server, packet sending/receiving, and network statistics.
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use renet::RenetClient;
 use renet_netcode::{NetcodeClientTransport, NetcodeTransportError};
-use std::time::Duration;
 
-use trueworld_protocol::{
-    serialize_packet, deserialize_packet,
-    ClientHello, ServerHello, ServerWelcome, ServerPlayerSpawn, ServerPlayerDespawn,
-    ServerEntitySpawn, ServerEntityDespawn, ServerWorldUpdate,
-};
-use trueworld_core::{
-    PlayerId, EntityId, net::{ClientMessage, ServerMessage, ConnectMessage, ConnectResultMessage},
-};
+use trueworld_protocol::{serialize_packet, deserialize_packet};
+use trueworld_core::{PlayerId, EntityId, net::{ClientMessage, ServerMessage}};
 
 use crate::state::NetworkStats;
 
@@ -36,7 +31,9 @@ impl Plugin for NetworkPlugin {
             .add_event::<PlayerSpawnEvent>()
             .add_event::<EntitySpawnEvent>()
             .add_event::<EntityDespawnEvent>()
-            .add_event::<WorldUpdateEvent>();
+            .add_event::<WorldUpdateEvent>()
+            .add_event::<PositionAckEvent>()
+            .add_event::<PositionCorrectionEvent>();
     }
 }
 
@@ -65,7 +62,10 @@ impl Default for NetworkResource {
             client: None,
             transport: None,
             server_addr: "127.0.0.1".to_string(),
-            server_port: 5000,
+            server_port: std::env::var("SERVER_PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(5000),
             current_connection_id: None,
             local_player_id: None,
             local_entity_id: None,
@@ -145,6 +145,24 @@ pub struct EntityDespawnEvent {
 pub struct WorldUpdateEvent {
     pub tick: u64,
     pub updates: Vec<EntityStateUpdate>,
+}
+
+/// Position acknowledgment event - server confirms player position
+#[derive(Event, Debug, Clone)]
+pub struct PositionAckEvent {
+    pub player_id: PlayerId,
+    pub ack_sequence: u32,
+    pub position: [f32; 3],
+    pub velocity: [f32; 3],
+    pub server_time: u64,
+}
+
+/// Position correction event - server forcibly corrects position
+#[derive(Event, Debug, Clone)]
+pub struct PositionCorrectionEvent {
+    pub player_id: PlayerId,
+    pub correct_position: [f32; 3],
+    pub reason: trueworld_core::net::CorrectionReason,
 }
 
 /// Individual entity state update
@@ -227,10 +245,12 @@ fn receive_packets(
     mut network_res: ResMut<NetworkResource>,
     mut queue: ResMut<NetworkQueue>,
     mut connection_events: EventWriter<ConnectionResult>,
-    mut player_spawn_events: EventWriter<PlayerSpawnEvent>,
-    mut entity_spawn_events: EventWriter<EntitySpawnEvent>,
+    _player_spawn_events: EventWriter<PlayerSpawnEvent>,
+    _entity_spawn_events: EventWriter<EntitySpawnEvent>,
     mut entity_despawn_events: EventWriter<EntityDespawnEvent>,
     mut world_update_events: EventWriter<WorldUpdateEvent>,
+    mut position_ack_events: EventWriter<PositionAckEvent>,
+    mut position_correction_events: EventWriter<PositionCorrectionEvent>,
 ) {
     let client = match &mut network_res.client {
         Some(c) => c,
@@ -251,6 +271,18 @@ fn receive_packets(
 
     // Receive messages from channel 1 (Reliable Unordered)
     while let Some(message) = client.receive_message(1) {
+        match deserialize_packet::<ServerMessage>(&message) {
+            Ok(server_msg) => {
+                queue.incoming_server.push(server_msg);
+            }
+            Err(e) => {
+                warn!("Failed to deserialize server message: {:?}", e);
+            }
+        }
+    }
+
+    // Receive messages from channel 2 (Unreliable - PositionAck)
+    while let Some(message) = client.receive_message(2) {
         match deserialize_packet::<ServerMessage>(&message) {
             Ok(server_msg) => {
                 queue.incoming_server.push(server_msg);
@@ -320,6 +352,32 @@ fn receive_packets(
             }
             ServerMessage::Pong(pong) => {
                 info!("Received pong: sequence={}, rtt={}ms", pong.ping_sequence, pong.rtt());
+            }
+            ServerMessage::PositionAck(ack) => {
+                // Server acknowledgment of player position
+                debug!("PositionAck: player_id={}, seq={}, pos={:?}",
+                    ack.player_id, ack.ack_sequence, ack.position);
+
+                // Send event for movement system to handle
+                position_ack_events.send(PositionAckEvent {
+                    player_id: ack.player_id,
+                    ack_sequence: ack.ack_sequence,
+                    position: ack.position,
+                    velocity: ack.velocity,
+                    server_time: ack.server_time,
+                });
+            }
+            ServerMessage::PositionCorrection(correction) => {
+                // Server forcibly correcting position (anti-cheat or collision)
+                info!("PositionCorrection: player_id={}, pos={:?}, reason={:?}",
+                    correction.player_id, correction.correct_position, correction.reason);
+
+                // Send event for movement system to handle
+                position_correction_events.send(PositionCorrectionEvent {
+                    player_id: correction.player_id,
+                    correct_position: correction.correct_position,
+                    reason: correction.reason,
+                });
             }
         }
     }

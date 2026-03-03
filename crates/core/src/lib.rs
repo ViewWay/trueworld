@@ -3,7 +3,6 @@
 // This library provides shared types, error handling, math utilities,
 // and network definitions for the TrueWorld game project.
 
-#![warn(missing_docs)]
 #![warn(clippy::all)]
 
 // Public modules

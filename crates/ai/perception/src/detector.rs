@@ -1,12 +1,11 @@
 // Detector module for TrueWorld perception
 
-use std::collections::{HashSet, VecDeque};
-use crate::{BoundingBox, MotionRegion};
+use crate::MotionRegion;
 
 /// Detector pipeline
 pub struct DetectorPipeline {
-    motion_detector: Option<MotionDetector>,
-    skin_detector: Option<SkinDetector>,
+    _motion_detector: Option<MotionDetector>,
+    _skin_detector: Option<SkinDetector>,
 }
 
 #[derive(Debug, Clone)]
@@ -38,12 +37,12 @@ impl DetectorPipeline {
         let detector_config = DetectorConfig::default();
 
         Self {
-            motion_detector: if config.enable_motion {
+            _motion_detector: if config.enable_motion {
                 Some(MotionDetector::new(&detector_config))
             } else {
                 None
             },
-            skin_detector: if config.enable_skin {
+            _skin_detector: if config.enable_skin {
                 Some(SkinDetector::new(&detector_config))
             } else {
                 None
@@ -59,15 +58,15 @@ impl DetectorPipeline {
 
 /// Motion detector (frame difference method)
 pub struct MotionDetector {
-    threshold: f32,
-    min_region_size: usize,
+    _threshold: f32,
+    _min_region_size: usize,
 }
 
 impl MotionDetector {
     pub fn new(config: &DetectorConfig) -> Self {
         Self {
-            threshold: config.motion_threshold,
-            min_region_size: config.motion_min_region,
+            _threshold: config.motion_threshold,
+            _min_region_size: config.motion_min_region,
         }
     }
 
@@ -79,17 +78,17 @@ impl MotionDetector {
 
 /// Skin color detector
 pub struct SkinDetector {
-    cmin: (u8, u8),
-    cmax: (u8, u8),
-    min_region_size: usize,
+    _cmin: (u8, u8),
+    _cmax: (u8, u8),
+    _min_region_size: usize,
 }
 
 impl SkinDetector {
     pub fn new(config: &DetectorConfig) -> Self {
         Self {
-            cmin: config.skin_h_range,
-            cmax: config.skin_s_range,
-            min_region_size: config.motion_min_region,
+            _cmin: config.skin_h_range,
+            _cmax: config.skin_s_range,
+            _min_region_size: config.motion_min_region,
         }
     }
 

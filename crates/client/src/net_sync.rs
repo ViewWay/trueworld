@@ -3,6 +3,8 @@
 // Network to Render synchronization system.
 // Connects network events to the rendering system, spawning and updating entities.
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::net::EntityType;
 
@@ -11,7 +13,6 @@ use crate::network::{
 };
 use crate::render::{
     spawn_entity_sprite, ProceduralSprites, NetworkEntity,
-    AnimationState, FacingDirection,
 };
 
 /// System to process world updates from network

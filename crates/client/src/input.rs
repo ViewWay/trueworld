@@ -3,6 +3,8 @@
 // Input collection and processing for the TrueWorld client.
 // Collects keyboard, mouse, and gamepad input and converts it to PlayerInput.
 
+#![allow(dead_code)]
+
 use bevy::{
     input::{
         gamepad::Gamepad,

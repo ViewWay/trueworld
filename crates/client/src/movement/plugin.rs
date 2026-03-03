@@ -1,10 +1,14 @@
 // Movement plugin and configuration
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
-use trueworld_core::PlayerInput;
 
 use super::prediction::PredictedState;
 use super::correction::PositionCorrection;
+
+use crate::network::NetworkResource;
+use trueworld_protocol::ClientInputPacket;
 
 /// Movement configuration resource
 #[derive(Resource, Clone, Debug)]
@@ -75,22 +79,49 @@ fn setup_movement(mut commands: Commands) {
 /// Send input to server (60Hz)
 ///
 /// This runs every frame to send the current input state to the server.
-/// Uses unreliable channel since dropped packets are acceptable.
+/// Uses unreliable channel 2 since dropped packets are acceptable.
 fn send_input_to_server(
     input_state: Res<crate::input::InputState>,
-    // TODO: Add Renet client resource when available
+    mut network: ResMut<NetworkResource>,
 ) {
-    // TODO: Implement actual network sending
-    // let packet = ClientInputPacket::from_player_input(&input_state.current);
-    // let bytes = serialize_packet(&packet)?;
-    // client.send_message(DefaultChannel::Unreliable, bytes);
+    // Only send if connected
+    if !network.is_connected() {
+        return;
+    }
 
-    // For now, just log the input (will be removed when network is connected)
-    if !input_state.current.movement.is_empty() {
+    let Some(client) = &mut network.client else {
+        return;
+    };
+
+    // Create ClientInputPacket from current input
+    let packet = ClientInputPacket {
+        sequence: input_state.sequence,
+        movement: input_state.current.movement,
+        actions: input_state.current.actions.clone(),
+        timestamp: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs(),
+    };
+
+    // Serialize the packet
+    let bytes = match bincode::serialize(&packet) {
+        Ok(data) => data,
+        Err(e) => {
+            warn!("Failed to serialize ClientInputPacket: {}", e);
+            return;
+        }
+    };
+
+    // Send on unreliable channel 2
+    client.send_message(2, bytes);
+
+    // Debug logging (only when there's actual movement)
+    if !input_state.current.movement.is_empty() || !input_state.current.actions.is_empty() {
         let has_movement = input_state.current.movement.iter()
             .any(|&v| v.abs() > 0.01);
 
-        if has_movement {
+        if has_movement || !input_state.current.actions.is_empty() {
             debug!(
                 "seq={}, movement={:?}, actions={}",
                 input_state.sequence,

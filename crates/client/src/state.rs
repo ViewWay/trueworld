@@ -1,5 +1,7 @@
 // crates/client/src/state.rs
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::*;
 
@@ -134,7 +136,10 @@ impl Default for NetworkClientConfig {
     fn default() -> Self {
         Self {
             server_address: "127.0.0.1".to_string(),
-            server_port: 5000,
+            server_port: std::env::var("SERVER_PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(5000),
             tick_rate: 60,
             client_update_rate: 30.0,
             timeout_secs: 10,

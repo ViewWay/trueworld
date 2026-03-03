@@ -1,5 +1,7 @@
 // crates/server/src/config.rs
 
+#![allow(dead_code)]
+
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -110,7 +112,7 @@ impl Default for ServerConfig {
         Self {
             bind_address: "0.0.0.0".to_string(),
             port: 5000,
-            max_rooms: 100,
+            max_rooms: 64,
             max_players_per_room: 16,
             tick_rate: 60,
             database: DatabaseConfig::default(),

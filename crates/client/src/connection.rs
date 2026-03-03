@@ -3,6 +3,8 @@
 // Connection management system for TrueWorld client.
 // Handles initiating connection to server and the connection handshake.
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use renet::{RenetClient, ConnectionConfig, DefaultChannel};
 use renet_netcode::{NetcodeClientTransport, ClientAuthentication};

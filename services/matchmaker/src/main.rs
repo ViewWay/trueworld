@@ -40,14 +40,14 @@ pub struct MatchTicket {
 
 /// Matchmaker service
 pub struct Matchmaker {
-    config: MatchmakerConfig,
+    _config: MatchmakerConfig,
     tickets: RwLock<Vec<MatchTicket>>,
 }
 
 impl Matchmaker {
     pub fn new(config: MatchmakerConfig) -> Self {
         Self {
-            config,
+            _config: config,
             tickets: RwLock::new(Vec::new()),
         }
     }

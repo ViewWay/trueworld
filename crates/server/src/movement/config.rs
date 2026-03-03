@@ -3,6 +3,8 @@
 // Movement validation configuration for the TrueWorld server.
 // Provides tuning parameters for anti-cheat and movement validation.
 
+#![allow(dead_code)]
+
 use trueworld_core::PlayerId;
 use std::collections::HashMap;
 

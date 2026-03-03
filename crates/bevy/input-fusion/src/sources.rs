@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 
 /// Input sources module
-pub fn register_keyboard_input_systems(app: &mut App) {
+pub fn register_keyboard_input_systems(_app: &mut App) {
     // TODO: Implement keyboard input registration
 }
 

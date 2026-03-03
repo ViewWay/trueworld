@@ -6,9 +6,11 @@
 // - Updating existing entities from server data
 // - Despawning removed entities
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::{
-    EntityId, EntityType, TransformState, EntityUpdate,
+    EntityId,
     WorldUpdateMessage,
 };
 
@@ -157,7 +159,7 @@ pub fn sync_entities_from_network(
 pub fn remove_despawned_entities(
     mut commands: Commands,
     mut mapping: ResMut<EntityMapping>,
-    mut pending_update: ResMut<PendingWorldUpdate>,
+    pending_update: ResMut<PendingWorldUpdate>,
 ) {
     let Some(update) = pending_update.update.as_ref() else {
         return;

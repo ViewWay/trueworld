@@ -3,6 +3,8 @@
 // This module provides the GameWorld which manages all game state
 // including entities, players, and physics simulation.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::time::Duration;
 use trueworld_core::{PlayerId, PlayerInput, net::{WorldUpdateMessage, ServerMessage, EntityUpdate}};

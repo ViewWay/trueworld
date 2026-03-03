@@ -169,7 +169,7 @@ pub fn receive_ai_inputs(
 ) {
     for event in events.read() {
         match event {
-            AiInputEvent::Action { action, confidence, timestamp } => {
+            AiInputEvent::Action { action, confidence: _, timestamp } => {
                 buffer.actions.push_back((action.clone(), *timestamp));
             }
             AiInputEvent::Voice { text, intent, confidence, timestamp } => {
@@ -182,7 +182,7 @@ pub fn receive_ai_inputs(
                     *timestamp,
                 ));
             }
-            AiInputEvent::Gesture { gesture, confidence, position, timestamp } => {
+            AiInputEvent::Gesture { gesture, confidence, position: _, timestamp } => {
                 buffer.gestures.push_back((
                     gesture.clone(),
                     *confidence,
@@ -342,7 +342,7 @@ fn check_gesture_match(skill_id: &str, gesture: &Gesture) -> bool {
 }
 
 /// 计算动作参数
-fn compute_parameters(buffer: &InputBuffer, trigger: &SkillTrigger) -> ActionParameters {
+fn compute_parameters(buffer: &InputBuffer, _trigger: &SkillTrigger) -> ActionParameters {
     let mut direction = Vec3::ZERO;
     let mut power = 1.0;
 
@@ -380,7 +380,7 @@ fn compute_parameters(buffer: &InputBuffer, trigger: &SkillTrigger) -> ActionPar
 /// 发送融合事件
 pub fn emit_fused_events(
     mut fused_events: EventReader<FusedInputEvent>,
-    mut commands: Commands,
+    _commands: Commands,
 ) {
     for event in fused_events.read() {
         match &event.action {

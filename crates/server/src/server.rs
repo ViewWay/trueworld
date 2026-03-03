@@ -15,20 +15,22 @@ use renet_netcode::ServerConfig as NetcodeServerConfig;
 use tokio::{
     sync::{mpsc, RwLock, oneshot},
     task::JoinHandle,
-    time::interval,
 };
 use trueworld_core::*;
-use trueworld_protocol::*;
 
 use crate::{
     config::ServerConfig,
     database::DatabaseManager,
     game::GameWorld,
-    network::{NetworkEvent, ServerNetwork, ConnectedClient},
-    player::{Player, PlayerSession},
+    movement::MovementUpdateProcessor,
+    network::NetworkEvent,
+    player::Player,
     room::RoomManager,
     shutdown::ShutdownManager,
 };
+
+use trueworld_core::net::ServerPositionAck;
+use crate::movement::ProcessInputResult;
 
 /// TrueWorld 服务器
 pub struct TrueWorldServer {
@@ -117,7 +119,7 @@ impl TrueWorldServer {
         info!("Starting TrueWorld Server...");
 
         // 创建网络通道
-        let (network_tx, mut network_rx) = mpsc::unbounded_channel();
+        let (network_tx, network_rx) = mpsc::unbounded_channel();
         let (game_tx, game_rx) = mpsc::unbounded_channel();
 
         // 启动网络任务
@@ -144,7 +146,7 @@ impl TrueWorldServer {
         self.game_handle = Some(game_handle);
 
         // 等待关闭信号
-        self.shutdown.wait().await;
+        let _ = self.shutdown.wait().await;
 
         info!("Shutting down TrueWorld Server...");
 
@@ -262,11 +264,18 @@ impl TrueWorldServer {
     ) -> JoinHandle<()> {
         tokio::spawn(async move {
             let mut shutdown = shutdown;
-            let mut tick = 0u64;
+            let _tick = 0u64;
             let tick_duration = Duration::from_secs_f64(1.0 / tick_rate as f64);
 
             // 创建游戏世界
             let mut game_world = GameWorld::new();
+
+            // 创建移动验证处理器 (Phase 4)
+            let mut movement_processor = MovementUpdateProcessor::with_defaults();
+
+            // Ack发送计数器 (每20个tick发送一次位置确认，约20Hz)
+            let mut ack_send_counter = 0u32;
+            const ACK_SEND_INTERVAL: u32 = 3; // 60Hz / 3 = 20Hz
 
             loop {
                 tokio::select! {
@@ -287,15 +296,17 @@ impl TrueWorldServer {
                                         &players,
                                         &database,
                                         &game_tx,
+                                        &mut movement_processor,
                                     ).await;
                                 }
-                                NetworkEvent::ClientDisconnected { client_id, player_id } => {
+                                NetworkEvent::ClientDisconnected { client_id, player_id: _ } => {
                                     // 处理断开连接
                                     Self::handle_client_disconnected(
                                         client_id,
                                         &room_manager,
                                         &players,
                                         &game_tx,
+                                        &mut movement_processor,
                                     ).await;
                                 }
                                 NetworkEvent::Message { client_id, message } => {
@@ -308,6 +319,8 @@ impl TrueWorldServer {
                                         &mut game_world,
                                         &database,
                                         &game_tx,
+                                        &mut movement_processor,
+                                        tick_duration,
                                     ).await;
                                 }
                             }
@@ -316,11 +329,41 @@ impl TrueWorldServer {
                         // 更新游戏世界
                         game_world.update(tick_duration);
 
+                        // 更新移动处理器
+                        movement_processor.update(tick_duration);
+
+                        // 定期发送位置确认 (约20Hz)
+                        ack_send_counter = ack_send_counter.wrapping_add(1);
+                        if ack_send_counter >= ACK_SEND_INTERVAL {
+                            ack_send_counter = 0;
+
+                            // 获取所有玩家的位置确认
+                            for (player_id, _position, _velocity) in movement_processor.create_position_updates() {
+                                let state = movement_processor.get_player_state(player_id);
+                                if let Some(state) = state {
+                                    let ack = ServerPositionAck {
+                                        player_id,
+                                        ack_sequence: state.last_client_sequence,
+                                        position: state.position,
+                                        velocity: state.velocity,
+                                        server_time: std::time::SystemTime::now()
+                                            .duration_since(std::time::UNIX_EPOCH)
+                                            .unwrap()
+                                            .as_secs(),
+                                    };
+                                    game_tx.send(ServerMessage::PositionAck(ack)).ok();
+                                }
+                            }
+                        }
+
+                        // 发送位置修正 (立即发送，可靠通道)
+                        for correction in movement_processor.take_corrections() {
+                            game_tx.send(ServerMessage::PositionCorrection(correction)).ok();
+                        }
+
                         // 广播状态
                         let world_update = game_world.create_update_packet();
                         game_tx.send(world_update).ok();
-
-                        tick += 1;
                     }
                 }
             }
@@ -330,10 +373,11 @@ impl TrueWorldServer {
     /// 处理客户端连接
     async fn handle_client_connected(
         client_id: u64,
-        room_manager: &Arc<RwLock<RoomManager>>,
-        players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
-        database: &Arc<DatabaseManager>,
+        _room_manager: &Arc<RwLock<RoomManager>>,
+        _players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
+        _database: &Arc<DatabaseManager>,
         game_tx: &mpsc::UnboundedSender<ServerMessage>,
+        _movement_processor: &mut MovementUpdateProcessor,
     ) {
         info!("Handling client connection: {}", client_id);
 
@@ -354,15 +398,8 @@ impl TrueWorldServer {
 
         game_tx.send(response).ok();
 
-        // 创建临时会话
-        let session = PlayerSession {
-            client_id,
-            player_id: None,
-            room_id: None,
-            authenticated: false,
-        };
-
-        // TODO: 存储会话，等待登录
+        // TODO: 在玩家完全连接后添加到 movement_processor
+        // 当前在 handle_connect_request_v2 中处理
     }
 
     /// 处理客户端断开
@@ -371,6 +408,7 @@ impl TrueWorldServer {
         room_manager: &Arc<RwLock<RoomManager>>,
         players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
         game_tx: &mpsc::UnboundedSender<ServerMessage>,
+        movement_processor: &mut MovementUpdateProcessor,
     ) {
         info!("Handling client disconnect: {}", client_id);
 
@@ -395,6 +433,9 @@ impl TrueWorldServer {
         };
 
         if let Some(player_id) = player_id {
+            // 从移动处理器中移除 (Phase 4)
+            movement_processor.remove_player(player_id);
+
             // 从房间移除
             let mut room_manager_guard = room_manager.write().await;
             room_manager_guard.remove_player(&player_id);
@@ -416,16 +457,18 @@ impl TrueWorldServer {
     async fn handle_client_message(
         client_id: u64,
         message: ClientMessage,
-        room_manager: &Arc<RwLock<RoomManager>>,
+        _room_manager: &Arc<RwLock<RoomManager>>,
         players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
         game_world: &mut GameWorld,
-        database: &Arc<DatabaseManager>,
+        _database: &Arc<DatabaseManager>,
         game_tx: &mpsc::UnboundedSender<ServerMessage>,
+        movement_processor: &mut MovementUpdateProcessor,
+        tick_duration: Duration,
     ) {
         match message {
             ClientMessage::Connect(connect_msg) => {
                 // 处理连接请求
-                Self::handle_connect_request_v2(client_id, connect_msg, players, database, game_tx).await;
+                Self::handle_connect_request_v2(client_id, connect_msg, players, game_tx, movement_processor).await;
             }
 
             ClientMessage::PlayerInput(input_msg) => {
@@ -446,8 +489,24 @@ impl TrueWorldServer {
                 game_tx.send(ServerMessage::Pong(pong_msg)).ok();
             }
 
-            _ => {
-                warn!("Unhandled message from client {}: {:?}", client_id, message);
+            ClientMessage::ClientInputPacket(packet_bytes) => {
+                // 处理客户端移动输入包 (Phase 4)
+                match bincode::deserialize::<trueworld_protocol::ClientInputPacket>(&packet_bytes) {
+                    Ok(packet) => {
+                        Self::handle_movement_input(
+                            client_id,
+                            packet,
+                            players,
+                            game_world,
+                            game_tx,
+                            movement_processor,
+                            tick_duration,
+                        ).await;
+                    }
+                    Err(e) => {
+                        warn!("Failed to deserialize ClientInputPacket: {}", e);
+                    }
+                }
             }
         }
     }
@@ -456,21 +515,28 @@ impl TrueWorldServer {
     async fn handle_connect_request_v2(
         client_id: u64,
         connect_msg: ConnectMessage,
-        players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
-        database: &Arc<DatabaseManager>,
+        _players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
         game_tx: &mpsc::UnboundedSender<ServerMessage>,
+        movement_processor: &mut MovementUpdateProcessor,
     ) {
         info!("Connect request from {}: {}", client_id, connect_msg.player_name);
 
         // TODO: 验证版本
         // TODO: 验证 Token (如果提供)
-        // TODO: 创建玩家会话
 
-        // 临时响应
+        // 创建玩家 ID
+        let player_id = PlayerId::new(client_id as u64);
+        let entity_id = EntityId::new(client_id);
+        let spawn_position = [0.0, 0.0, 0.0];
+
+        // 添加到移动处理器 (Phase 4)
+        movement_processor.add_player(player_id, spawn_position);
+
+        // 发送成功响应
         let result = ConnectResultMessage::success(
-            PlayerId::new(client_id as u64),
-            EntityId::new(client_id),
-            [0.0, 0.0, 0.0],
+            player_id,
+            entity_id,
+            spawn_position,
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
@@ -504,6 +570,70 @@ impl TrueWorldServer {
         if let Some(player_id) = player_id {
             // 更新输入
             game_world.set_player_input(player_id, input_msg.input);
+        }
+    }
+
+    /// 处理客户端移动输入包 (Phase 4 移动系统集成)
+    async fn handle_movement_input(
+        client_id: u64,
+        packet: trueworld_protocol::ClientInputPacket,
+        players: &Arc<RwLock<HashMap<PlayerId, Player>>>,
+        game_world: &mut GameWorld,
+        _game_tx: &mpsc::UnboundedSender<ServerMessage>,
+        movement_processor: &mut MovementUpdateProcessor,
+        tick_duration: Duration,
+    ) {
+        // 查找玩家 ID
+        let player_id = {
+            let players_guard = players.read().await;
+            let mut found_id = None;
+
+            for (id, player) in players_guard.iter() {
+                if player.session.client_id == client_id {
+                    found_id = Some(*id);
+                    break;
+                }
+            }
+
+            found_id
+        };
+
+        if let Some(player_id) = player_id {
+            // 使用 MovementUpdateProcessor 处理输入 (Phase 4)
+            let result = movement_processor.process_client_input(
+                player_id,
+                &packet,
+                tick_duration,
+            );
+
+            match result {
+                ProcessInputResult::Success { new_position, velocity } => {
+                    // 同时更新 GameWorld 以保持兼容性
+                    let player_input = PlayerInput {
+                        sequence: packet.sequence,
+                        movement: packet.movement,
+                        actions: packet.actions,
+                        view_direction: [0.0, 0.0, 0.0],
+                        timestamp: packet.timestamp,
+                    };
+                    game_world.set_player_input(player_id, player_input);
+
+                    info!("Player {} moved to {:?}, velocity {:?}", player_id, new_position, velocity);
+                }
+                ProcessInputResult::IgnoredOldInput => {
+                    info!("Ignored old input from player {}", player_id);
+                }
+                ProcessInputResult::Violation { reason, .. } => {
+                    warn!("Movement violation for player {}: {:?}", player_id, reason);
+                }
+                ProcessInputResult::KickRequired { player_id, reason } => {
+                    warn!("Kicking player {} for: {}", player_id, reason);
+                    // TODO: 实现踢出逻辑
+                }
+                ProcessInputResult::PlayerNotFound => {
+                    info!("Player {} not found in movement processor", player_id);
+                }
+            }
         }
     }
 

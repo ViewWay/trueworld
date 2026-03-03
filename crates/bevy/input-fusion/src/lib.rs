@@ -1,8 +1,8 @@
 // crates/bevy/input-fusion/src/lib.rs
 
 use bevy::{
-    app::{Plugin, PreUpdate, Update},
-    ecs::schedule::{LogLevel, SystemSet},
+    app::{Plugin, Update},
+    ecs::schedule::SystemSet,
     prelude::*,
 };
 use std::time::Instant;

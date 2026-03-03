@@ -1,5 +1,7 @@
 // crates/server/src/player.rs
 
+#![allow(dead_code)]
+
 use trueworld_core::PlayerId;
 
 pub struct Player {

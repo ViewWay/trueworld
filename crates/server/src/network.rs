@@ -3,6 +3,8 @@
 // Network handling for TrueWorld server.
 // Manages client connections, message routing, and packet broadcasting.
 
+#![allow(dead_code)]
+
 use std::collections::{HashMap, VecDeque};
 use std::net::UdpSocket;
 use std::time::Duration;

@@ -1,10 +1,12 @@
 // Local prediction system for client-side movement
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::PlayerInput;
 use std::collections::VecDeque;
 
-use super::{MAX_INPUT_HISTORY, MovementConfig};
+use super::MAX_INPUT_HISTORY;
 
 /// Local predicted state for the player
 ///
@@ -236,7 +238,7 @@ mod tests {
 
     #[test]
     fn test_predict_movement_forward() {
-        let config = super::MovementConfig::default();
+        let config = crate::movement::MovementConfig::default();
 
         let mut input = PlayerInput::new(1);
         input.movement = [0.0, 0.0, 1.0]; // Forward
@@ -249,12 +251,12 @@ mod tests {
 
     #[test]
     fn test_predict_movement_jump() {
-        let config = super::MovementConfig::default();
+        let config = crate::movement::MovementConfig::default();
 
         let mut input = PlayerInput::new(1);
         input.add_action(InputAction::Jump);
 
-        let (pos, vel) = predict_movement(Vec3::ZERO, Vec3::ZERO, &input, &config, 1.0);
+        let (_pos, vel) = predict_movement(Vec3::ZERO, Vec3::ZERO, &input, &config, 1.0);
 
         assert!(vel.y > 0.0, "Should have upward velocity when jumping");
     }

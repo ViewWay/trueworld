@@ -2,8 +2,6 @@
 //
 // This crate handles voice input processing and speech recognition.
 
-use std::time::Instant;
-
 /// ASR engine configuration
 #[derive(Debug, Clone)]
 pub struct AsrConfig {
@@ -53,7 +51,7 @@ impl AsrEngine {
     }
 
     /// Transcribe audio
-    pub async fn transcribe(&self, audio: &[f32]) -> anyhow::Result<Transcription> {
+    pub async fn transcribe(&self, _audio: &[f32]) -> anyhow::Result<Transcription> {
         // TODO: Implement actual transcription
         Ok(Transcription {
             text: String::new(),

@@ -5,6 +5,8 @@
 // - Frame timing and transitions
 // - Facing direction tracking
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use std::time::Duration;
 

@@ -54,6 +54,11 @@ pub enum ClientMessage {
     /// Player input for a specific frame
     PlayerInput(PlayerInputMessage),
 
+    /// Raw input packet (60Hz, Unreliable channel)
+    /// The actual packet is defined in trueworld_protocol::ClientInputPacket
+    /// This variant uses a serialized byte representation for efficiency
+    ClientInputPacket(Vec<u8>),  // Serialized ClientInputPacket
+
     /// Ping for latency measurement
     Ping(PingMessage),
 }
@@ -146,6 +151,51 @@ impl PingMessage {
 // Server Messages
 // ============================================================================
 
+/// Reason for position correction
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CorrectionReason {
+    /// Client moved too fast (speed limit exceeded)
+    SpeedLimitExceeded,
+    /// Collision detected (client in wall)
+    Collision,
+    /// Server rollback (state mismatch)
+    ServerRollback,
+    /// Teleport (gameplay mechanic)
+    Teleport,
+}
+
+/// Server position acknowledgment (unreliable channel)
+///
+/// Sent periodically (~20Hz) to confirm the player's position on the server.
+/// Client uses this for reconciliation with local prediction.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerPositionAck {
+    /// Player ID being acknowledged
+    pub player_id: PlayerId,
+    /// Last confirmed input sequence number
+    pub ack_sequence: u32,
+    /// Authoritative server position
+    pub position: Position,
+    /// Current velocity
+    pub velocity: [f32; 3],
+    /// Server timestamp
+    pub server_time: u64,
+}
+
+/// Position correction (reliable channel - critical)
+///
+/// Sent when server needs to forcibly correct client position
+/// (e.g., after collision detection or anti-cheat).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerPositionCorrection {
+    /// Player ID being corrected
+    pub player_id: PlayerId,
+    /// Correct position (immediate jump)
+    pub correct_position: Position,
+    /// Reason for correction
+    pub reason: CorrectionReason,
+}
+
 /// Messages sent from server to client
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ServerMessage {
@@ -157,6 +207,12 @@ pub enum ServerMessage {
 
     /// Pong response to ping
     Pong(PongMessage),
+
+    /// Position acknowledgment (sent ~20Hz to confirm player position)
+    PositionAck(ServerPositionAck),
+
+    /// Position correction (sent when server needs to forcibly correct position)
+    PositionCorrection(ServerPositionCorrection),
 }
 
 /// Connection result message

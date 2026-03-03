@@ -3,10 +3,13 @@
 // Position update processing for the TrueWorld server.
 // Handles client input packets, updates positions, and sends acknowledgments.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 use trueworld_core::{PlayerId, Position, Velocity, PlayerInput};
-use trueworld_protocol::{ClientInputPacket, ServerPositionAck, ServerPositionCorrection, CorrectionReason};
+use trueworld_core::net::{ServerPositionAck, ServerPositionCorrection, CorrectionReason};
+use trueworld_protocol::ClientInputPacket;
 
 use super::validation::{MovementValidator, ValidationResult, ServerPlayerMovement};
 use super::config::{ServerMovementConfig, ViolationManager};
@@ -63,7 +66,7 @@ impl MovementUpdateProcessor {
         let violation_threshold = config.teleport_violation_threshold;
 
         // Get current state data before borrowing
-        let (last_sequence, current_position, last_position) = {
+        let (last_sequence, current_position, _last_position) = {
             let state = self.player_states.get(&player_id);
             if let Some(s) = state {
                 (s.last_client_sequence, s.position, s.last_position)
@@ -122,15 +125,17 @@ impl MovementUpdateProcessor {
             None
         };
 
-        // Now get mutable state (after validation)
-        let mut state = self.player_states
-            .entry(player_id)
-            .or_insert_with(|| ServerPlayerMovement::new([0.0, 0.0, 0.0]));
+        // Get current position before modifying state (needed for some cases)
+        let current_position = self.player_states.get(&player_id).map(|s| s.position);
 
+        // Now process based on validation result
         match result {
             ValidationResult::Valid => {
-                // Use pre-calculated delta
                 let delta = delta_for_calc.unwrap();
+                let state = self.player_states
+                    .entry(player_id)
+                    .or_insert_with(|| ServerPlayerMovement::new([0.0, 0.0, 0.0]));
+
                 let new_position = [
                     state.position[0] + delta[0],
                     state.position[1] + delta[1],
@@ -152,8 +157,7 @@ impl MovementUpdateProcessor {
                 // Update state
                 state.update(new_position, velocity, packet.sequence, self.current_tick);
 
-                // Queue acknowledgment (drop state borrow first)
-                drop(state);
+                // Queue acknowledgment - done via self
                 self.queue_position_ack(player_id, packet.sequence);
 
                 ProcessInputResult::Success {
@@ -163,13 +167,11 @@ impl MovementUpdateProcessor {
             }
 
             ValidationResult::OldInput { .. } => {
-                drop(state);
                 ProcessInputResult::IgnoredOldInput
             }
 
             ValidationResult::TooFast { .. } => {
-                let pos = state.position;
-                drop(state);
+                let pos = current_position.unwrap_or([0.0, 0.0, 0.0]);
 
                 // Record violation and send correction
                 let tracker = self.violations.get_tracker(player_id);
@@ -188,9 +190,16 @@ impl MovementUpdateProcessor {
             }
 
             ValidationResult::Collision { .. } => {
-                let corrected = [state.position[0], 0.0, state.position[2]];
-                state.position = corrected;
-                drop(state);
+                let corrected = if let Some(pos) = current_position {
+                    [pos[0], 0.0, pos[2]]
+                } else {
+                    [0.0, 0.0, 0.0]
+                };
+
+                // Update state
+                if let Some(state) = self.player_states.get_mut(&player_id) {
+                    state.position = corrected;
+                }
 
                 // Record violation and send correction
                 let tracker = self.violations.get_tracker(player_id);
@@ -209,8 +218,7 @@ impl MovementUpdateProcessor {
             }
 
             ValidationResult::TeleportDetected { .. } => {
-                let pos = state.position;
-                drop(state);
+                let pos = current_position.unwrap_or([0.0, 0.0, 0.0]);
 
                 // Record violation - may kick
                 let tracker = self.violations.get_tracker(player_id);
@@ -236,7 +244,6 @@ impl MovementUpdateProcessor {
             }
 
             ValidationResult::PlayerNotFound { .. } => {
-                drop(state);
                 ProcessInputResult::PlayerNotFound
             }
         }

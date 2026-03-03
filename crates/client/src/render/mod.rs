@@ -6,6 +6,8 @@
 // - Animation system
 // - Camera following player
 
+#![allow(dead_code)]
+
 pub mod sprite;
 pub mod animation;
 pub mod camera;
@@ -22,7 +24,6 @@ use sync::EntitySyncPlugin;
 // Re-export from submodules for public API
 pub use sync::NetworkEntity;
 pub use sprite::ProceduralSprites;
-pub use animation::{AnimationState, FacingDirection};
 
 /// Main render plugin that combines all rendering subsystems
 pub struct EntityRenderPlugin;
@@ -39,6 +40,4 @@ impl Plugin for EntityRenderPlugin {
 }
 
 // Re-export commonly used types
-pub use sprite::{spawn_entity_sprite, generate_entity_sprite};
-pub use camera::CameraFollowTarget;
-pub use sync::{sync_entities_from_network, remove_despawned_entities};
+pub use sprite::spawn_entity_sprite;

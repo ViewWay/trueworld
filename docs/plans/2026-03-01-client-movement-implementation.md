@@ -2,8 +2,8 @@
 
 **设计文档**: [2026-03-01-client-movement-design.md](./2026-03-01-client-movement-design.md)
 **创建日期**: 2026-03-01
-**最后更新**: 2026-03-02 00:30
-**状态**: Phase 3 已完成，准备文档化
+**最后更新**: 2026-03-03 07:45
+**状态**: Phase 4 网络集成完成，待端到端测试
 
 ## 实施步骤
 
@@ -53,8 +53,14 @@
 - [x] 注册到 `main.rs`
 - [x] 单元测试通过 (29 tests)
 
-### 第四阶段：集成与测试
+### 第四阶段：集成与测试 🔄 进行中
 
+- [x] 协议层扩展：添加 ClientInputPacket 到 ClientMessage 枚举
+- [x] 服务器添加 ClientInputPacket 处理
+- [x] 客户端网络集成：发送 ClientInputPacket
+- [x] 服务器集成：使用 MovementUpdateProcessor
+- [x] 添加 ServerPositionAck 和 ServerPositionCorrection 到 ServerMessage
+- [x] 客户端接收位置确认和修正事件
 - [ ] 连接客户端和服务器
 - [ ] 端到端移动测试
 - [ ] 网络延迟模拟测试
@@ -64,27 +70,32 @@
 ## 当前状态
 
 **阻塞**: 无
-**进行中**: 文档化 (产品规格书、接口设计)
+**进行中**: Phase 4 - 端到端测试
 **已完成**:
 - ✅ Phase 1: 协议扩展 (2026-03-01 22:00-23:00)
 - ✅ Phase 2: 客户端移动模块 (2026-03-01 23:00-23:26)
 - ✅ Phase 3: 服务器验证模块 (2026-03-02 00:00-00:30)
+- ✅ 文档化完成：架构文档、PRD、接口文档 (2026-03-02 00:30-01:00)
+- ✅ Phase 4 网络集成 (2026-03-03 07:30-07:45):
+  - ✅ 服务器集成 MovementUpdateProcessor
+  - ✅ 客户端发送 ClientInputPacket
+  - ✅ 位置确认和修正消息处理
 
 ## 下一步
 
-1. 产品规格说明书 (PRD)
-   - 移动系统需求定义
-   - 性能指标
-   - 安全要求
+1. 端到端测试
+   - 在服务器主循环中创建 MovementUpdateProcessor
+   - 处理 ClientInputPacket 并发送响应
 
-2. 接口设计文档
-   - 协议接口定义
-   - API 接口说明
-   - 数据结构定义
+2. 客户端网络集成
+   - 修改网络模块发送 ClientInputPacket
+   - 接收 ServerPositionAck 和 ServerPositionCorrection
 
-3. Phase 4: 集成与测试
-   - 连接客户端和服务器
-   - 端到端移动测试
-   - 网络延迟模拟测试
-   - 修正逻辑验证
-   - 性能测试 (多玩家)
+3. 端到端测试
+   - 连接测试
+   - 移动测试
+   - 延迟模拟测试
+
+4. 性能测试
+   - 多玩家压力测试
+   - 带宽使用分析

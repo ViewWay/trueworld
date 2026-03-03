@@ -3,6 +3,8 @@
 // This module provides the core entity management system for the game,
 // including the Entity struct and EntityManager for handling all game entities.
 
+#![allow(dead_code)]
+
 use std::collections::HashMap;
 use std::time::Duration;
 use trueworld_core::{

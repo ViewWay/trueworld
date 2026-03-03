@@ -3,8 +3,10 @@
 // Movement validation system for the TrueWorld server.
 // Validates client movement inputs for anti-cheat and physics consistency.
 
+#![allow(dead_code)]
+
 use trueworld_core::{PlayerId, Position, Velocity, PlayerInput, InputAction};
-use super::config::{ServerMovementConfig, PlayerViolationTracker};
+use super::config::ServerMovementConfig;
 
 /// Result of movement validation
 #[derive(Debug, Clone, PartialEq)]
@@ -203,7 +205,7 @@ impl MovementValidator {
         current_state: &ServerPlayerMovement,
         input: &PlayerInput,
         delta_time: f32,
-        current_tick: u64,
+        _current_tick: u64,
     ) -> ValidationResult {
         // Check for old/dupe input
         if input.sequence <= current_state.last_client_sequence {

@@ -1,5 +1,7 @@
 // crates/server/src/database.rs
 
+#![allow(dead_code)]
+
 use anyhow::Result;
 
 pub struct DatabaseManager;

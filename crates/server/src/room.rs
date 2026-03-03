@@ -1,5 +1,7 @@
 // crates/server/src/room.rs
 
+#![allow(dead_code)]
+
 use trueworld_core::PlayerId;
 use std::collections::HashMap;
 

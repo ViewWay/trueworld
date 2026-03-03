@@ -1,9 +1,11 @@
 // Server position correction system
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::PlayerId;
 
-use super::prediction::{PredictedState, InputSnapshot};
+use super::prediction::PredictedState;
 
 /// Position correction state
 ///
@@ -169,6 +171,7 @@ pub fn process_position_ack(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::super::prediction::InputSnapshot;
 
     #[test]
     fn test_position_correction_default() {

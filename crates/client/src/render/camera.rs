@@ -5,6 +5,8 @@
 // - Smooth camera movement
 // - World bounds checking
 
+#![allow(dead_code)]
+
 use bevy::prelude::*;
 use trueworld_core::EntityId;
 
